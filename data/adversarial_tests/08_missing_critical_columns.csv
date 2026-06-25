@@ -1,0 +1,6 @@
+transaction_id,company_name,product_description,invoice_date,invoice_amount,payment_terms,country,notes
+TXN-001,ACME Corp,Industrial valves 2",2024-01-15,4500.00,NET30,Germany,Partial shipment
+TXN-002,Beta Ltd,Hydraulic pumps,2024-01-16,3200.50,NET60,France,On time
+TXN-003,Gamma Inc,Electronic sensors,2024-01-17,8900.00,NET30,China,Quality hold
+TXN-004,Delta LLC,Steel pipes 6",2024-01-18,1200.75,COD,India,Delayed - port congestion
+TXN-005,ACME Corp,Industrial valves 4",2024-01-19,4300.00,NET30,Germany,Complete

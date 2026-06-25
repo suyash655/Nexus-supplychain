@@ -1,0 +1,11 @@
+supplier,sku,warehouse,region,shipment_id,order_date,delivery_date,delay_days,cost,quantity,category,quality_score
+MegaSupplier_X,SKU-001,WH_CENTRAL,Global,PO-001,2024-01-01,2024-01-08,7,45000.00,1000,Electronics,78.0
+MegaSupplier_X,SKU-001,WH_CENTRAL,Global,PO-002,2024-01-02,2024-01-10,8,46000.00,1000,Electronics,76.0
+MegaSupplier_X,SKU-001,WH_CENTRAL,Global,PO-003,2024-01-03,2024-01-11,8,44500.00,1000,Electronics,79.0
+MegaSupplier_X,SKU-002,WH_CENTRAL,Global,PO-004,2024-01-04,2024-01-12,8,47000.00,1000,Electronics,77.0
+MegaSupplier_X,SKU-002,WH_CENTRAL,Global,PO-005,2024-01-05,2024-01-13,8,45500.00,1000,Electronics,78.0
+MegaSupplier_X,SKU-003,WH_EAST,Asia,PO-006,2024-01-06,2024-01-14,8,48000.00,1000,Electronics,75.0
+MegaSupplier_X,SKU-003,WH_EAST,Asia,PO-007,2024-01-07,2024-01-15,8,46500.00,1000,Electronics,76.0
+MegaSupplier_X,SKU-004,WH_WEST,Americas,PO-008,2024-01-08,2024-01-16,8,45000.00,1000,Electronics,79.0
+MegaSupplier_X,SKU-004,WH_WEST,Americas,PO-009,2024-01-09,2024-01-17,8,44000.00,1000,Electronics,80.0
+Supplier_Tiny,SKU-005,WH_NORTH,Europe,PO-010,2024-01-10,2024-01-11,1,500.00,5,Electronics,99.0

@@ -1,0 +1,6 @@
+carrier_id,origin,destination,reference,ship_date,eta,actual_delivery,transit_days,freight_cost,volume,product_type,condition_score
+CARRIER_001,Chicago IL,New York NY,BOL-2024-001,2024-01-15,2024-01-19,2024-01-19,4,342.50,125,General Freight,95.0
+CARRIER_002,Los Angeles CA,Seattle WA,BOL-2024-002,2024-01-16,2024-01-18,2024-01-20,4,489.00,200,Refrigerated,88.0
+CARRIER_003,Miami FL,Dallas TX,BOL-2024-003,2024-01-17,2024-01-19,2024-01-19,2,892.00,50,Hazmat Class 3,72.0
+CARRIER_001,Chicago IL,Boston MA,BOL-2024-004,2024-01-18,2024-01-22,2024-01-25,7,298.75,95,General Freight,91.0
+CARRIER_004,Phoenix AZ,Denver CO,BOL-2024-005,2024-01-19,2024-01-21,2024-02-01,13,1240.00,450,Oversized,65.0

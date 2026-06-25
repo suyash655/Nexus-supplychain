@@ -1,0 +1,75 @@
+name: Deploy NEXUS
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with: 
+          python-version: "3.12"
+      - run: |
+          pip install -r backend/requirements.txt
+          pip install pytest httpx pip-audit
+          pytest backend/ -v
+      - name: Run pip-audit
+        continue-on-error: true
+        run: |
+          pip-audit -r backend/requirements.txt
+
+  build-backend:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+      - name: Build, tag, and push backend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker build -t nexus-backend:${{ github.sha }} backend/
+          docker tag nexus-backend:${{ github.sha }} $ECR_REGISTRY/nexus-backend:latest
+          docker push $ECR_REGISTRY/nexus-backend:latest
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service --cluster nexus --service nexus-api --force-new-deployment
+
+  build-frontend:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+      - name: Build, tag, and push frontend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          docker build -f frontend/Dockerfile.frontend -t nexus-frontend:${{ github.sha }} frontend/
+          docker tag nexus-frontend:${{ github.sha }} $ECR_REGISTRY/nexus-frontend:latest
+          docker push $ECR_REGISTRY/nexus-frontend:latest
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service --cluster nexus --service nexus-frontend --force-new-deployment

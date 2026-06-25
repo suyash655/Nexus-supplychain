@@ -1,0 +1,14 @@
+supplier,sku,warehouse,region,shipment_id,order_date,delivery_date,delay_days,cost,quantity,category,quality_score
+Supplier_A,SKU-001,WH_001,North,PO-001,2024-01-15,2024-01-22,0,0.01,1,Electronics,100.0
+Supplier_A,SKU-001,WH_001,North,PO-002,2024-01-16,2024-01-23,0,0.01,1,Electronics,100.0
+Supplier_A,SKU-001,WH_001,North,PO-003,2024-01-17,2024-01-24,0,0.01,1,Electronics,100.0
+Supplier_A,SKU-001,WH_001,North,PO-004,2024-01-18,2024-01-25,0,0.01,1,Electronics,100.0
+Supplier_A,SKU-001,WH_001,North,PO-005,2024-01-19,2024-01-26,0,0.01,1,Electronics,100.0
+Supplier_A,SKU-001,WH_001,North,PO-006,2024-01-20,2024-01-27,0,0.01,1,Electronics,100.0
+Supplier_A,SKU-001,WH_001,North,PO-007,2024-01-21,2024-01-28,0,0.01,1,Electronics,100.0
+Supplier_A,SKU-001,WH_001,North,PO-008,2024-01-22,2024-01-29,0,0.01,1,Electronics,100.0
+Supplier_A,SKU-001,WH_001,North,PO-009,2024-01-23,2024-01-30,0,0.01,1,Electronics,100.0
+Supplier_A,SKU-001,WH_001,North,PO-010,2024-01-24,2024-01-31,999,99999999.99,999999,Electronics,0.0
+Supplier_B,SKU-002,WH_002,South,PO-011,,,,-1,,-10,Mechanical,-5.0
+Supplier_C,SKU-003,WH_003,East,PO-012,2024-01-15,2023-12-01,0,inf,100,Chemical,
+Supplier_D,SKU-004,WH_004,West,PO-013,2024-01-15,2024-01-15,0,nan,100,Electronics,nan

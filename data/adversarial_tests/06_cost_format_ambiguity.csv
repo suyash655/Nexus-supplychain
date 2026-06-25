@@ -1,0 +1,9 @@
+supplier,sku,warehouse,region,shipment_id,order_date,delivery_date,delay_days,cost,quantity,category,quality_score
+Supplier_A,SKU-001,WH_US,USA,PO-001,2024-01-15,2024-01-22,7,"$4,500.00",100,Electronics,88.5
+Supplier_B,SKU-002,WH_EU,Germany,PO-002,2024-01-16,2024-01-20,4,"3.200,50",75,Mechanical,92.0
+Supplier_C,SKU-003,WH_UK,UK,PO-003,2024-01-17,2024-01-19,2,8900,200,Chemical,95.0
+Supplier_D,SKU-004,WH_JP,Japan,PO-004,2024-01-18,2024-01-28,10,"¥1,200,750",30,Electronics,61.0
+Supplier_E,SKU-005,WH_IN,India,PO-005,2024-01-19,2024-01-23,4,"₹4,30,000.00",105,Textile,87.0
+Supplier_F,SKU-006,WH_BR,Brazil,PO-006,2024-01-20,2024-01-27,7,"R$ 2.100,25",60,Chemical,79.0
+Supplier_A,SKU-001,WH_US,USA,PO-007,2024-01-21,2024-01-22,1,9800.50,300,Electronics,91.0
+Supplier_G,SKU-007,WH_AU,Australia,PO-008,2024-01-22,2024-01-29,7,"AUD 5,600",150,Mechanical,83.0

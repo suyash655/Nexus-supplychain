@@ -1,0 +1,31 @@
+# backend requirements
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+pandas
+numpy
+scikit-learn
+scipy
+networkx
+python-dotenv
+
+# Storage and Excel
+boto3>=1.35.0
+openpyxl
+PyJWT
+bcrypt>=4.0.0
+python-multipart
+slowapi>=0.1.9
+email-validator>=2.0.0
+
+# RAG Agent
+llama-index-core>=0.11.0
+llama-index-llms-bedrock>=0.3.0
+llama-index-embeddings-bedrock>=0.3.0
+llama-parse>=0.5.0
+
+# Async + streaming
+asyncio>=3.4.3
+anyio>=4.0.0
+sse-starlette

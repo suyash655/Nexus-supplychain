@@ -1,0 +1,153 @@
+.nexus-chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: 600px;
+  background: var(--background-surface, #0a0a0f);
+  border: 1px solid var(--background-border, rgba(255, 255, 255, 0.06));
+  border-radius: 12px;
+  overflow: hidden;
+  font-family: var(--font-sans, system-ui, sans-serif);
+}
+
+.nexus-chat-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--background-border, rgba(255, 255, 255, 0.06));
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.nexus-chat-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #e8e8ed);
+  letter-spacing: 0.02em;
+}
+
+.nexus-chat-subtitle {
+  font-size: 11px;
+  color: var(--text-tertiary, #636366);
+  margin-top: 4px;
+}
+
+.nexus-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.nexus-chat-empty {
+  margin: auto;
+  text-align: center;
+}
+
+.nexus-chat-empty-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary, #aeaeb2);
+}
+
+.nexus-chat-empty-subtitle {
+  font-size: 12px;
+  color: var(--text-tertiary, #636366);
+  margin-top: 8px;
+}
+
+.nexus-chat-message-row {
+  display: flex;
+  width: 100%;
+}
+
+.nexus-chat-message-row.user {
+  justify-content: flex-end;
+}
+
+.nexus-chat-message-row.assistant {
+  justify-content: flex-start;
+}
+
+.nexus-chat-bubble {
+  max-width: 80%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.nexus-chat-bubble.user {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary, #e8e8ed);
+  border-bottom-right-radius: 4px;
+}
+
+.nexus-chat-bubble.assistant {
+  background: transparent;
+  color: var(--text-secondary, #aeaeb2);
+  border: 1px solid var(--background-border, rgba(255, 255, 255, 0.06));
+  border-bottom-left-radius: 4px;
+}
+
+.nexus-chat-bubble.assistant.loading {
+  color: var(--text-tertiary, #636366);
+  font-style: italic;
+  border: none;
+  background: transparent;
+}
+
+.nexus-chat-sources {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.nexus-chat-source-badge {
+  font-size: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: var(--text-tertiary, #636366);
+}
+
+.nexus-chat-input-area {
+  display: flex;
+  gap: 8px;
+  padding: 16px;
+  border-top: 1px solid var(--background-border, rgba(255, 255, 255, 0.06));
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.nexus-chat-input {
+  flex: 1;
+  background: var(--background-surface, #0a0a0f);
+  border: 1px solid var(--background-border, rgba(255, 255, 255, 0.06));
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: var(--text-primary, #e8e8ed);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.nexus-chat-input:focus {
+  border-color: var(--text-tertiary, #636366);
+}
+
+.nexus-chat-send {
+  background: var(--text-primary, #e8e8ed);
+  color: var(--background-surface, #0a0a0f);
+  border: none;
+  border-radius: 8px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.nexus-chat-send:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

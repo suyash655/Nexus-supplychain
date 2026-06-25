@@ -1,0 +1,809 @@
+[00:00:02.474] Server  LOG     ✓ Ready in 1665ms
+[00:00:08.363] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:00:13.902] Server  ERROR   ⨯ ./app/dashboard/page.tsx:24:7
+Ecmascript file had an error
+  22 | const SynLineChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  23 | const SynPieChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+> 24 | const SynAreaChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+     |       ^^^^^^^^^^^^
+  25 |
+  26 | const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+  27 |
+
+the name `SynAreaChart` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+
+
+
+./app/dashboard/page.tsx:21:7
+Ecmascript file had an error
+  19 | import { NoData } from "../components/Cards/NoData";
+  20 |
+> 21 | const SynBarChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynBarChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+     |       ^^^^^^^^^^^
+  22 | const SynLineChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  23 | const SynPieChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  24 | const SynAreaChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+
+the name `SynBarChart` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+
+
+
+./app/dashboard/page.tsx:23:7
+Ecmascript file had an error
+  21 | const SynBarChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynBarChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  22 | const SynLineChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+> 23 | const SynPieChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+     |       ^^^^^^^^^^^
+  24 | const SynAreaChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  25 |
+  26 | const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+
+the name `SynPieChart` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+
+
+
+./app/components/Charts.tsx:77:1
+Parsing ecmascript source code failed
+  75 |    LINE CHART
+  76 |    ============================ */
+> 77 | export const SynLineChart = React.memo(function SynLineChart({
+     | ^^^^^^
+  78 |     data,
+  79 |     lines,
+  80 |     xKey = "name",
+
+Expected ',', got 'export'
+
+Import trace:
+  Client Component Browser:
+    ./app/components/Charts.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+
+[00:00:14.192] Browser ERROR   ./app/dashboard/page.tsx:24:7
+Ecmascript file had an error
+  22 | const SynLineChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  23 | const SynPieChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+> 24 | const SynAreaChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+     |       ^^^^^^^^^^^^
+  25 |
+  26 | const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+  27 |
+
+the name `SynAreaChart` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:00:14.192] Browser ERROR   ./app/dashboard/page.tsx:21:7
+Ecmascript file had an error
+  19 | import { NoData } from "../components/Cards/NoData";
+  20 |
+> 21 | const SynBarChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynBarChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+     |       ^^^^^^^^^^^
+  22 | const SynLineChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  23 | const SynPieChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  24 | const SynAreaChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+
+the name `SynBarChart` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:00:14.192] Browser ERROR   ./app/dashboard/page.tsx:23:7
+Ecmascript file had an error
+  21 | const SynBarChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynBarChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  22 | const SynLineChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+> 23 | const SynPieChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+     |       ^^^^^^^^^^^
+  24 | const SynAreaChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  25 |
+  26 | const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+
+the name `SynPieChart` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:00:14.192] Browser ERROR   ./app/components/Charts.tsx:77:1
+Parsing ecmascript source code failed
+  75 |    LINE CHART
+  76 |    ============================ */
+> 77 | export const SynLineChart = React.memo(function SynLineChart({
+     | ^^^^^^
+  78 |     data,
+  79 |     lines,
+  80 |     xKey = "name",
+
+Expected ',', got 'export'
+
+Import trace:
+  Client Component Browser:
+    ./app/components/Charts.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+[00:00:15.345] Browser ERROR   ./app/dashboard/page.tsx:24:7
+Ecmascript file had an error
+  22 | const SynLineChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  23 | const SynPieChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+> 24 | const SynAreaChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+     |       ^^^^^^^^^^^^
+  25 |
+  26 | const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+  27 |
+
+the name `SynAreaChart` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:00:15.345] Browser ERROR   ./app/dashboard/page.tsx:21:7
+Ecmascript file had an error
+  19 | import { NoData } from "../components/Cards/NoData";
+  20 |
+> 21 | const SynBarChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynBarChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+     |       ^^^^^^^^^^^
+  22 | const SynLineChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  23 | const SynPieChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  24 | const SynAreaChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+
+the name `SynBarChart` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:00:15.345] Browser ERROR   ./app/dashboard/page.tsx:23:7
+Ecmascript file had an error
+  21 | const SynBarChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynBarChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  22 | const SynLineChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+> 23 | const SynPieChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+     |       ^^^^^^^^^^^
+  24 | const SynAreaChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  25 |
+  26 | const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+
+the name `SynPieChart` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:00:15.345] Browser ERROR   ./app/components/Charts.tsx:77:1
+Parsing ecmascript source code failed
+  75 |    LINE CHART
+  76 |    ============================ */
+> 77 | export const SynLineChart = React.memo(function SynLineChart({
+     | ^^^^^^
+  78 |     data,
+  79 |     lines,
+  80 |     xKey = "name",
+
+Expected ',', got 'export'
+
+Import trace:
+  Client Component Browser:
+    ./app/components/Charts.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+[00:00:15.515] Server  ERROR   ⨯ ./app/dashboard/page.tsx:24:7
+Ecmascript file had an error
+  22 | const SynLineChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  23 | const SynPieChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+> 24 | const SynAreaChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+     |       ^^^^^^^^^^^^
+  25 |
+  26 | const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+  27 |
+
+the name `SynAreaChart` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+
+
+
+./app/dashboard/page.tsx:21:7
+Ecmascript file had an error
+  19 | import { NoData } from "../components/Cards/NoData";
+  20 |
+> 21 | const SynBarChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynBarChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+     |       ^^^^^^^^^^^
+  22 | const SynLineChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  23 | const SynPieChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  24 | const SynAreaChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+
+the name `SynBarChart` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+
+
+
+./app/dashboard/page.tsx:23:7
+Ecmascript file had an error
+  21 | const SynBarChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynBarChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  22 | const SynLineChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+> 23 | const SynPieChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+     |       ^^^^^^^^^^^
+  24 | const SynAreaChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  25 |
+  26 | const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+
+the name `SynPieChart` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+
+
+
+./app/components/Charts.tsx:77:1
+Parsing ecmascript source code failed
+  75 |    LINE CHART
+  76 |    ============================ */
+> 77 | export const SynLineChart = React.memo(function SynLineChart({
+     | ^^^^^^
+  78 |     data,
+  79 |     lines,
+  80 |     xKey = "name",
+
+Expected ',', got 'export'
+
+Import trace:
+  Client Component Browser:
+    ./app/components/Charts.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+
+[00:00:16.365] Browser ERROR   uncaughtError: Error: ./app/dashboard/page.tsx:24:7
+Ecmascript file had an error
+  22 | const SynLineChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  23 | const SynPieChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+> 24 | const SynAreaChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+     |       ^^^^^^^^^^^^
+  25 |
+  26 | const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+  27 |
+
+the name `SynAreaChart` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+
+
+[00:00:16.555] Browser ERROR   ./app/dashboard/page.tsx:24:7
+Ecmascript file had an error
+  22 | const SynLineChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  23 | const SynPieChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+> 24 | const SynAreaChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+     |       ^^^^^^^^^^^^
+  25 |
+  26 | const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+  27 |
+
+the name `SynAreaChart` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:00:16.555] Browser ERROR   ./app/dashboard/page.tsx:21:7
+Ecmascript file had an error
+  19 | import { NoData } from "../components/Cards/NoData";
+  20 |
+> 21 | const SynBarChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynBarChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+     |       ^^^^^^^^^^^
+  22 | const SynLineChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  23 | const SynPieChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  24 | const SynAreaChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+
+the name `SynBarChart` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:00:16.555] Browser ERROR   ./app/dashboard/page.tsx:23:7
+Ecmascript file had an error
+  21 | const SynBarChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynBarChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  22 | const SynLineChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+> 23 | const SynPieChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+     |       ^^^^^^^^^^^
+  24 | const SynAreaChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  25 |
+  26 | const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+
+the name `SynPieChart` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:00:16.555] Browser ERROR   ./app/components/Charts.tsx:77:1
+Parsing ecmascript source code failed
+  75 |    LINE CHART
+  76 |    ============================ */
+> 77 | export const SynLineChart = React.memo(function SynLineChart({
+     | ^^^^^^
+  78 |     data,
+  79 |     lines,
+  80 |     xKey = "name",
+
+Expected ',', got 'export'
+
+Import trace:
+  Client Component Browser:
+    ./app/components/Charts.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+[00:00:16.645] Browser ERROR   ./app/dashboard/page.tsx:24:7
+Ecmascript file had an error
+  22 | const SynLineChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  23 | const SynPieChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+> 24 | const SynAreaChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+     |       ^^^^^^^^^^^^
+  25 |
+  26 | const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+  27 |
+
+the name `SynAreaChart` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:00:16.645] Browser ERROR   ./app/dashboard/page.tsx:21:7
+Ecmascript file had an error
+  19 | import { NoData } from "../components/Cards/NoData";
+  20 |
+> 21 | const SynBarChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynBarChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+     |       ^^^^^^^^^^^
+  22 | const SynLineChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  23 | const SynPieChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  24 | const SynAreaChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+
+the name `SynBarChart` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:00:16.645] Browser ERROR   ./app/dashboard/page.tsx:23:7
+Ecmascript file had an error
+  21 | const SynBarChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynBarChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  22 | const SynLineChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+> 23 | const SynPieChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+     |       ^^^^^^^^^^^
+  24 | const SynAreaChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  25 |
+  26 | const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+
+the name `SynPieChart` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:00:16.645] Browser ERROR   ./app/components/Charts.tsx:77:1
+Parsing ecmascript source code failed
+  75 |    LINE CHART
+  76 |    ============================ */
+> 77 | export const SynLineChart = React.memo(function SynLineChart({
+     | ^^^^^^
+  78 |     data,
+  79 |     lines,
+  80 |     xKey = "name",
+
+Expected ',', got 'export'
+
+Import trace:
+  Client Component Browser:
+    ./app/components/Charts.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+[00:00:26.595] Browser ERROR   ./app/dashboard/page.tsx:24:7
+Ecmascript file had an error
+  22 | const SynLineChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  23 | const SynPieChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+> 24 | const SynAreaChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+     |       ^^^^^^^^^^^^
+  25 |
+  26 | const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+  27 |
+
+the name `SynAreaChart` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:00:26.595] Browser ERROR   ./app/dashboard/page.tsx:21:7
+Ecmascript file had an error
+  19 | import { NoData } from "../components/Cards/NoData";
+  20 |
+> 21 | const SynBarChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynBarChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+     |       ^^^^^^^^^^^
+  22 | const SynLineChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  23 | const SynPieChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  24 | const SynAreaChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+
+the name `SynBarChart` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:00:26.595] Browser ERROR   ./app/dashboard/page.tsx:23:7
+Ecmascript file had an error
+  21 | const SynBarChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynBarChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  22 | const SynLineChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+> 23 | const SynPieChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+     |       ^^^^^^^^^^^
+  24 | const SynAreaChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+  25 |
+  26 | const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+
+the name `SynPieChart` is defined multiple times
+
+Import traces:
+  Client Component Browser:
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/dashboard/page.tsx [Client Component SSR]
+    ./app/dashboard/page.tsx [Server Component]
+[00:00:26.595] Browser ERROR   ./app/components/Charts.tsx:77:1
+Parsing ecmascript source code failed
+  75 |    LINE CHART
+  76 |    ============================ */
+> 77 | export const SynLineChart = React.memo(function SynLineChart({
+     | ^^^^^^
+  78 |     data,
+  79 |     lines,
+  80 |     xKey = "name",
+
+Expected ',', got 'export'
+
+Import trace:
+  Client Component Browser:
+    ./app/components/Charts.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+[00:00:57.483] Browser ERROR   ./app/components/Charts.tsx:77:1
+Parsing ecmascript source code failed
+  75 |    LINE CHART
+  76 |    ============================ */
+> 77 | export const SynLineChart = React.memo(function SynLineChart({
+     | ^^^^^^
+  78 |     data,
+  79 |     lines,
+  80 |     xKey = "name",
+
+Expected ',', got 'export'
+
+Import trace:
+  Client Component Browser:
+    ./app/components/Charts.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+[00:01:11.449] Server  ERROR   ⨯ ./app/components/Charts.tsx:77:1
+Parsing ecmascript source code failed
+  75 |    LINE CHART
+  76 |    ============================ */
+> 77 | export const SynLineChart = React.memo(function SynLineChart({
+     | ^^^^^^
+  78 |     data,
+  79 |     lines,
+  80 |     xKey = "name",
+
+Expected ',', got 'export'
+
+Import trace:
+  Client Component Browser:
+    ./app/components/Charts.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+
+[00:01:12.117] Browser ERROR   uncaughtError: Error: ./app/components/Charts.tsx:77:1
+Parsing ecmascript source code failed
+  75 |    LINE CHART
+  76 |    ============================ */
+> 77 | export const SynLineChart = React.memo(function SynLineChart({
+     | ^^^^^^
+  78 |     data,
+  79 |     lines,
+  80 |     xKey = "name",
+
+Expected ',', got 'export'
+
+Import trace:
+  Client Component Browser:
+    ./app/components/Charts.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+
+
+[00:01:12.279] Browser ERROR   ./app/components/Charts.tsx:77:1
+Parsing ecmascript source code failed
+  75 |    LINE CHART
+  76 |    ============================ */
+> 77 | export const SynLineChart = React.memo(function SynLineChart({
+     | ^^^^^^
+  78 |     data,
+  79 |     lines,
+  80 |     xKey = "name",
+
+Expected ',', got 'export'
+
+Import trace:
+  Client Component Browser:
+    ./app/components/Charts.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+[00:01:12.279] Browser ERROR   ./app/components/Charts.tsx:77:1
+Parsing ecmascript source code failed
+  75 |    LINE CHART
+  76 |    ============================ */
+> 77 | export const SynLineChart = React.memo(function SynLineChart({
+     | ^^^^^^
+  78 |     data,
+  79 |     lines,
+  80 |     xKey = "name",
+
+Expected ',', got 'export'
+
+Import trace:
+  Client Component Browser:
+    ./app/components/Charts.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Client Component Browser]
+    ./app/dashboard/page.tsx [Server Component]
+[00:01:39.376] Server  LOG     ✓ Compiled in 219ms
+[00:01:40.323] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:01:43.482] Browser ERROR   React has detected a change in the order of Hooks called by %s. This will lead to bugs and errors if not fixed. For more information, read the Rules of Hooks: https://react.dev/link/rules-of-hooks
+
+   Previous render            Next render
+   ------------------------------------------------------
+%s   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ DashboardPage 1. useContext                 useContext
+2. useContext                 useContext
+3. useState                   useState
+4. useState                   useState
+5. useState                   useState
+6. useRef                     useRef
+7. useCallback                useCallback
+8. useEffect                  useEffect
+9. useCallback                useCallback
+10. useState                  useState
+11. useState                  useState
+12. useState                  useState
+13. useRef                    useRef
+14. useCallback               useCallback
+15. useEffect                 useEffect
+16. useCallback               useCallback
+17. useState                  useState
+18. useState                  useState
+19. useState                  useState
+20. useRef                    useRef
+21. useCallback               useCallback
+22. useEffect                 useEffect
+23. useCallback               useCallback
+24. useState                  useState
+25. useState                  useState
+26. useState                  useState
+27. useRef                    useRef
+28. useCallback               useCallback
+29. useEffect                 useEffect
+30. useCallback               useCallback
+31. useState                  useState
+32. useState                  useState
+33. useState                  useState
+34. useRef                    useRef
+35. useCallback               useCallback
+36. useEffect                 useEffect
+37. useCallback               useCallback
+38. useState                  useState
+39. useState                  useState
+40. useState                  useState
+41. useRef                    useRef
+42. useCallback               useCallback
+43. useEffect                 useEffect
+44. useCallback               useCallback
+45. undefined                 useMemo
+
+[00:01:43.482] Browser ERROR   NEXUS Error Boundary caught: {}
+[00:01:43.482] Browser ERROR   NEXUS Error Boundary caught: {}
+[00:03:22.138] Browser ERROR   NEXUS Error Boundary caught: {}
+[00:03:22.138] Browser ERROR   NEXUS Error Boundary caught: {}
+[00:03:25.638] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:03:28.417] Browser ERROR   React has detected a change in the order of Hooks called by %s. This will lead to bugs and errors if not fixed. For more information, read the Rules of Hooks: https://react.dev/link/rules-of-hooks
+
+   Previous render            Next render
+   ------------------------------------------------------
+%s   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ DashboardPage 1. useContext                 useContext
+2. useContext                 useContext
+3. useState                   useState
+4. useState                   useState
+5. useState                   useState
+6. useRef                     useRef
+7. useCallback                useCallback
+8. useEffect                  useEffect
+9. useCallback                useCallback
+10. useState                  useState
+11. useState                  useState
+12. useState                  useState
+13. useRef                    useRef
+14. useCallback               useCallback
+15. useEffect                 useEffect
+16. useCallback               useCallback
+17. useState                  useState
+18. useState                  useState
+19. useState                  useState
+20. useRef                    useRef
+21. useCallback               useCallback
+22. useEffect                 useEffect
+23. useCallback               useCallback
+24. useState                  useState
+25. useState                  useState
+26. useState                  useState
+27. useRef                    useRef
+28. useCallback               useCallback
+29. useEffect                 useEffect
+30. useCallback               useCallback
+31. useState                  useState
+32. useState                  useState
+33. useState                  useState
+34. useRef                    useRef
+35. useCallback               useCallback
+36. useEffect                 useEffect
+37. useCallback               useCallback
+38. useState                  useState
+39. useState                  useState
+40. useState                  useState
+41. useRef                    useRef
+42. useCallback               useCallback
+43. useEffect                 useEffect
+44. useCallback               useCallback
+45. undefined                 useMemo
+
+[00:03:28.417] Browser ERROR   NEXUS Error Boundary caught: {}
+[00:03:28.417] Browser ERROR   NEXUS Error Boundary caught: {}
+[00:04:14.500] Server  LOG     ✓ Compiled in 110ms
+[00:06:40.691] Browser WARN    The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+[00:06:40.691] Browser WARN    The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+[00:08:58.577] Browser WARN    The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+[00:08:58.577] Browser WARN    The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+[00:09:06.402] Browser ERROR   {}
+[00:09:06.635] Browser ERROR   {}
+[00:18:26.706] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:18:29.310] Browser ERROR   {}
+[00:20:16.730] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:20:46.053] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+[00:22:33.636] Browser INFO    %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
