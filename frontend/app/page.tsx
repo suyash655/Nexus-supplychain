@@ -5,6 +5,7 @@ import {
     Hero,
     HowItWorks,
     FeaturesGrid,
+    Integrations,
     Pricing,
     Footer,
 } from "@/app/components/ui/saas-marketing";
@@ -17,6 +18,7 @@ export default function LandingPage() {
             <Hero />
             <HowItWorks />
             <FeaturesGrid />
+            <Integrations />
             <Pricing />
             <Footer />
         </main>

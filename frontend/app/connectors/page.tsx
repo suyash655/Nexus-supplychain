@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { AnimatedSection, StaggerGrid, StaggerItem } from "../components/Animated";
 import { useToast } from "../components/ToastContext";
-import { apiFetch } from "@/lib/api";
+import { apiFetchJSON, apiPostJSON } from "@/lib/api";
 import {
   Database, Plug, Cloud, Globe, CheckCircle, XCircle, RefreshCw, Plus,
 } from "lucide-react";
@@ -27,45 +27,65 @@ export default function ConnectorsPage() {
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState("csv");
   const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [testingId, setTestingId] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setError(null);
+    try {
+      const [typesRes, connsRes] = await Promise.all([
+        apiFetchJSON<{ types?: ConnectorType[] }>(`/connectors/types`),
+        apiFetchJSON<{ connectors?: Connector[] }>(`/connectors`),
+      ]);
+      setTypes(typesRes.types || []);
+      setConnectors(connsRes.connectors || []);
+      if (!newType && typesRes.types?.[0]?.id) {
+        setNewType(typesRes.types[0].id);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to load connectors";
+      setError(message);
+      showToast(message, "error");
+    } finally {
+      setLoading(false);
+    }
+  }, [newType, showToast]);
 
   useEffect(() => {
-    async function load() {
-      try {
-        const [typesRes, connsRes] = await Promise.all([
-          apiFetch(`/connectors/types`).then(r => r.json()),
-          apiFetch(`/connectors`).then(r => r.json()),
-        ]);
-        setTypes(typesRes.types || []);
-        setConnectors(connsRes.connectors || []);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
     load();
-  }, []);
+  }, [load]);
 
   const createConnector = async () => {
-    const formData = new FormData();
-    formData.append("name", newName);
-    formData.append("connector_type", newType);
-    await apiFetch(`/connectors`, { method: "POST", body: formData });
-    setShowCreate(false);
-    setNewName("");
-    // Reload
-    const res = await apiFetch(`/connectors`).then(r => r.json());
-    setConnectors(res.connectors || []);
-    showToast("Connector created successfully!", "success");
+    const name = newName.trim();
+    if (!name) {
+      showToast("Connector name is required.", "warning");
+      return;
+    }
+    setCreating(true);
+    try {
+      await apiPostJSON(`/connectors`, { name, connector_type: newType, config: {}, schedule: "manual" });
+      setShowCreate(false);
+      setNewName("");
+      await load();
+      showToast("Connector created successfully.", "success");
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Connector creation failed.", "error");
+    } finally {
+      setCreating(false);
+    }
   };
 
   const testConnector = async (id: number) => {
+    setTestingId(id);
     try {
-      const res = await apiFetch(`/connectors/${id}/test`, { method: "POST" });
-      const data = await res.json();
+      const data = await apiPostJSON<{ status: string; message?: string }>(`/connectors/${id}/test`, {});
       showToast(`Connection Test: ${data.status} ${data.message || ""}`, data.status === "success" ? "success" : "error");
-    } catch {
-      showToast("Connection test failed.", "error");
+      await load();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Connection test failed.", "error");
+    } finally {
+      setTestingId(null);
     }
   };
 
@@ -127,7 +147,9 @@ export default function ConnectorsPage() {
                     {types.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                   </select>
                 </div>
-                <button onClick={createConnector} className="btn btn-primary">Create</button>
+                <button onClick={createConnector} className="btn btn-primary" disabled={creating}>
+                  {creating ? "Creating..." : "Create"}
+                </button>
               </div>
             </div>
           </AnimatedSection>
@@ -137,7 +159,15 @@ export default function ConnectorsPage() {
         <AnimatedSection delay={0.2}>
           <h2 className="text-subheading" style={{ marginBottom: 16 }}>Active Connectors</h2>
         </AnimatedSection>
-        {connectors.length === 0 ? (
+        {error ? (
+          <div className="card-static" style={{ textAlign: "center", padding: 40, color: "var(--color-danger)" }}>
+            {error}
+          </div>
+        ) : loading ? (
+          <div className="card-static" style={{ textAlign: "center", padding: 40, color: "var(--color-text-muted)" }}>
+            Loading connectors...
+          </div>
+        ) : connectors.length === 0 ? (
           <div className="card-static" style={{ textAlign: "center", padding: 40, color: "var(--color-text-muted)" }}>
             No connectors configured. Create one to start ingesting data.
           </div>
@@ -159,8 +189,8 @@ export default function ConnectorsPage() {
                     {c.last_status === "success" ? <CheckCircle size={12} /> : <XCircle size={12} />}
                     {c.last_status || "pending"}
                   </span>
-                  <button onClick={() => testConnector(c.id)} className="btn btn-ghost btn-sm">
-                    <RefreshCw size={12} /> Test
+                  <button onClick={() => testConnector(c.id)} className="btn btn-ghost btn-sm" disabled={testingId === c.id}>
+                    <RefreshCw size={12} /> {testingId === c.id ? "Testing..." : "Test"}
                   </button>
                 </div>
               </div>

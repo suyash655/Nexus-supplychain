@@ -113,7 +113,10 @@ def deep_inference(db: Session = Depends(get_db), user: dict = Depends(require_a
         return {"error": "Graph not built yet"}
 
     g = _rebuild_graph(graph_res)
-    return g.deep_tier_inference()
+    df = _load_dataframe()
+    if df.empty:
+        return {"error": "No data available for deep-tier inference"}
+    return g.deep_tier_inference(df)
 
 
 # ── Temporal Graph (T-GNN) ──

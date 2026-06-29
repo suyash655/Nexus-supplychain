@@ -17,14 +17,6 @@ const NODE_COLORS: Record<string, string> = {
     unknown: "#64748b",
 };
 
-const NODE_GLOW_COLORS: Record<string, string> = {
-    supplier: "rgba(250, 204, 21, 0.3)",
-    sku: "rgba(56, 189, 248, 0.2)",
-    warehouse: "rgba(52, 211, 153, 0.2)",
-    region: "rgba(167, 139, 250, 0.2)",
-    unknown: "rgba(100, 116, 139, 0.15)",
-};
-
 interface GraphNode {
     id: string;
     name: string;
@@ -67,6 +59,7 @@ export default function GraphPage() {
     const [hoveredNode, setHoveredNode] = useState<ForceNode | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set(["supplier", "sku", "warehouse", "region"]));
+    const [maxNodes, setMaxNodes] = useState(100);
     const graphRef = useRef<unknown>(null);
 
     // Centrality lookup for node sizing
@@ -80,14 +73,20 @@ export default function GraphPage() {
         return map;
     }, [centrality]);
 
-    // Filter graph data based on active filters and search
+    // Filter graph data based on active filters and search, with node limit
     const filteredGraphData = useMemo(() => {
         if (!graphData) return null;
-        const filteredNodes = graphData.nodes.filter((n: GraphNode) => {
+        let filteredNodes = graphData.nodes.filter((n: GraphNode) => {
             const matchesType = activeFilters.has(n.type);
             const matchesSearch = !searchQuery || n.name.toLowerCase().includes(searchQuery.toLowerCase()) || n.id.toLowerCase().includes(searchQuery.toLowerCase());
             return matchesType && matchesSearch;
         });
+        
+        // Sort by centrality (importance) and limit nodes
+        filteredNodes = filteredNodes
+            .sort((a: GraphNode, b: GraphNode) => (centralityMap[b.id] || 0) - (centralityMap[a.id] || 0))
+            .slice(0, maxNodes);
+        
         const nodeIds = new Set(filteredNodes.map((n: GraphNode) => n.id));
         const filteredLinks = graphData.links.filter((l: any) => {
             const src = typeof l.source === "object" ? l.source.id : l.source;
@@ -95,7 +94,7 @@ export default function GraphPage() {
             return nodeIds.has(src) && nodeIds.has(tgt);
         });
         return { nodes: filteredNodes, links: filteredLinks };
-    }, [graphData, activeFilters, searchQuery]);
+    }, [graphData, activeFilters, searchQuery, maxNodes, centralityMap]);
 
     useEffect(() => {
         async function load() {
@@ -126,7 +125,7 @@ export default function GraphPage() {
                 });
                 setGraphSummary(summary);
                 setCentrality(centralities);
-                setCriticalPaths(Array.isArray(paths) ? paths : []);
+                setCriticalPaths(Array.isArray(paths) ? paths : (paths.data ?? []));
             } catch (e: unknown) {
                 const msg = e instanceof Error ? e.message : String(e);
                 setError(msg);
@@ -183,9 +182,8 @@ export default function GraphPage() {
 
     const getNodeSize = useCallback((node: ForceNode) => {
         const centralityScore = centralityMap[node.id] || 0;
-        const baseSize = { supplier: 6, warehouse: 5, sku: 4, region: 5 }[node.type] || 4;
-        const volumeBonus = Math.min(3, (node.shipments || node.volume || node.throughput || node.activity || 0) / 20);
-        return baseSize + centralityScore * 40 + volumeBonus;
+        const baseSize = { supplier: 4, warehouse: 3, sku: 2, region: 3 }[node.type] || 2;
+        return baseSize + Math.min(4, centralityScore * 10);
     }, [centralityMap]);
 
     const getRiskColor = useCallback((node: ForceNode) => {
@@ -206,100 +204,28 @@ export default function GraphPage() {
             const x = node.x ?? 0;
             const y = node.y ?? 0;
 
-            // Outer glow for all nodes
-            const glowColor = NODE_GLOW_COLORS[node.type] || NODE_GLOW_COLORS.unknown;
-            const glowRadius = radius * (isHovered ? 4 : 2.5);
-            const grad = ctx.createRadialGradient(x, y, 0, x, y, glowRadius);
-            grad.addColorStop(0, isHighlighted ? glowColor : "transparent");
-            grad.addColorStop(1, "transparent");
+            // Simple solid circle
             ctx.beginPath();
-            ctx.arc(x, y, glowRadius, 0, Math.PI * 2);
-            ctx.fillStyle = grad;
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = isHighlighted ? baseColor : baseColor + "88";
             ctx.fill();
 
-            // Risk ring for high-risk suppliers
-            if (node.type === "supplier" && (node.avg_delay || 0) > 5) {
-                ctx.beginPath();
-                ctx.arc(x, y, radius + 2, 0, Math.PI * 2);
-                ctx.strokeStyle = (node.avg_delay || 0) > 10 ? "rgba(239, 68, 68, 0.6)" : "rgba(245, 158, 11, 0.4)";
+            // Simple border for hover
+            if (isHovered) {
+                ctx.strokeStyle = "#ffffff";
                 ctx.lineWidth = 1.5 / globalScale;
                 ctx.stroke();
             }
 
-            // Main node body
-            ctx.beginPath();
-            ctx.arc(x, y, radius, 0, Math.PI * 2);
-
-            // Gradient fill
-            const fillGrad = ctx.createRadialGradient(x - radius * 0.3, y - radius * 0.3, 0, x, y, radius);
-            fillGrad.addColorStop(0, isHighlighted ? baseColor : baseColor + "66");
-            fillGrad.addColorStop(1, isHighlighted ? baseColor + "BB" : baseColor + "33");
-            ctx.fillStyle = fillGrad;
-            ctx.fill();
-
-            // Border
-            if (isHovered || (highlightNodes.size > 0 && highlightNodes.has(node.id))) {
-                ctx.strokeStyle = baseColor;
-                ctx.lineWidth = 2 / globalScale;
-                ctx.stroke();
-            }
-
-            // Label
-            if (globalScale >= 0.8 || isHovered) {
+            // Simple label only for important nodes or on hover
+            if (globalScale >= 1.2 || isHovered) {
                 const label = node.name || node.id;
-                const fontSize = Math.max(10, 12 / globalScale);
-                ctx.font = `${isHovered ? "bold " : ""}${fontSize}px 'IBM Plex Mono', monospace`;
-                ctx.fillStyle = isHighlighted ? "#f1f5f9" : "#64748b88";
+                const fontSize = Math.max(9, 10 / globalScale);
+                ctx.font = `${fontSize}px sans-serif`;
+                ctx.fillStyle = "#94a3b8";
                 ctx.textAlign = "center";
                 ctx.textBaseline = "top";
-                ctx.fillText(label.length > 16 ? label.slice(0, 15) + "…" : label, x, y + radius + 4);
-            }
-
-            // Hover tooltip
-            if (isHovered && globalScale >= 0.6) {
-                const metrics: string[] = [];
-                if (node.shipments) metrics.push(`${node.shipments} shipments`);
-                if (node.avg_delay) metrics.push(`${node.avg_delay}d delay`);
-                if (node.total_cost) metrics.push(`₹${(node.total_cost / 1000).toFixed(0)}K`);
-                if (node.volume) metrics.push(`${node.volume} SKUs`);
-                if (node.throughput) metrics.push(`${node.throughput} throughput`);
-
-                if (metrics.length > 0) {
-                    const tooltipText = metrics.join(" · ");
-                    const tooltipFontSize = Math.max(9, 10 / globalScale);
-                    ctx.font = `${tooltipFontSize}px 'IBM Plex Mono', monospace`;
-                    const textWidth = ctx.measureText(tooltipText).width;
-                    const padding = 6 / globalScale;
-                    const tooltipY = y - radius - 20 / globalScale;
-
-                    // Background
-                    ctx.fillStyle = "rgba(15, 23, 42, 0.9)";
-                    ctx.strokeStyle = baseColor + "44";
-                    ctx.lineWidth = 1 / globalScale;
-                    ctx.beginPath();
-                    const r = 4 / globalScale;
-                    const tx = x - textWidth / 2 - padding;
-                    const ty = tooltipY - padding;
-                    const tw = textWidth + padding * 2;
-                    const th = tooltipFontSize + padding * 2;
-                    ctx.moveTo(tx + r, ty);
-                    ctx.lineTo(tx + tw - r, ty);
-                    ctx.quadraticCurveTo(tx + tw, ty, tx + tw, ty + r);
-                    ctx.lineTo(tx + tw, ty + th - r);
-                    ctx.quadraticCurveTo(tx + tw, ty + th, tx + tw - r, ty + th);
-                    ctx.lineTo(tx + r, ty + th);
-                    ctx.quadraticCurveTo(tx, ty + th, tx, ty + th - r);
-                    ctx.lineTo(tx, ty + r);
-                    ctx.quadraticCurveTo(tx, ty, tx + r, ty);
-                    ctx.fill();
-                    ctx.stroke();
-
-                    // Text
-                    ctx.fillStyle = "#e2e8f0";
-                    ctx.textAlign = "center";
-                    ctx.textBaseline = "middle";
-                    ctx.fillText(tooltipText, x, tooltipY + tooltipFontSize / 2);
-                }
+                ctx.fillText(label.length > 12 ? label.slice(0, 11) + "…" : label, x, y + radius + 2);
             }
         },
         [highlightNodes, hoveredNode, getNodeSize, getRiskColor]
@@ -308,30 +234,17 @@ export default function GraphPage() {
     const renderLink = useCallback((link: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
         const src = link.source as ForceNode;
         const tgt = link.target as ForceNode;
-        if (!src.x || !tgt.x) return;
+        if (src.x == null || src.y == null || tgt.x == null || tgt.y == null) return;
 
-        const weight = link.weight || 1;
         const isHighlighted = highlightNodes.size > 0 && (highlightNodes.has(src.id) || highlightNodes.has(tgt.id));
 
         ctx.beginPath();
-        ctx.moveTo(src.x, src.y!);
-        ctx.lineTo(tgt.x, tgt.y!);
-        ctx.strokeStyle = isHighlighted ? "rgba(250, 204, 21, 0.25)" : "rgba(148, 163, 184, 0.08)";
-        ctx.lineWidth = Math.min(isHighlighted ? weight * 0.8 : weight * 0.3, 3) / globalScale;
+        ctx.moveTo(src.x, src.y);
+        ctx.lineTo(tgt.x, tgt.y);
+        ctx.strokeStyle = isHighlighted ? "rgba(250, 204, 21, 0.3)" : "rgba(148, 163, 184, 0.15)";
+        ctx.lineWidth = 1 / globalScale;
         ctx.stroke();
-
-        // Arrow
-        const angle = Math.atan2(tgt.y! - src.y!, tgt.x - src.x);
-        const arrowLen = 4 / globalScale;
-        const endX = tgt.x - Math.cos(angle) * (getNodeSize(tgt) + 2);
-        const endY = tgt.y! - Math.sin(angle) * (getNodeSize(tgt) + 2);
-        ctx.beginPath();
-        ctx.moveTo(endX, endY);
-        ctx.lineTo(endX - arrowLen * Math.cos(angle - Math.PI / 6), endY - arrowLen * Math.sin(angle - Math.PI / 6));
-        ctx.lineTo(endX - arrowLen * Math.cos(angle + Math.PI / 6), endY - arrowLen * Math.sin(angle + Math.PI / 6));
-        ctx.fillStyle = isHighlighted ? "rgba(250, 204, 21, 0.4)" : "rgba(148, 163, 184, 0.15)";
-        ctx.fill();
-    }, [highlightNodes, getNodeSize]);
+    }, [highlightNodes]);
 
     if (loading) {
         return (
@@ -377,10 +290,10 @@ export default function GraphPage() {
                     {/* Stats */}
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 12, marginBottom: 20 }}>
                         {[
-                            { label: "Nodes", value: graphSummary?.total_nodes ?? 0 },
+                            { label: "Visible Nodes", value: filteredGraphData?.nodes.length ?? 0 },
+                            { label: "Total Nodes", value: graphSummary?.total_nodes ?? 0 },
                             { label: "Edges", value: graphSummary?.total_edges ?? 0 },
                             { label: "Density", value: graphSummary?.density ?? 0 },
-                            { label: "Components", value: graphSummary?.components ?? 0 },
                             { label: "Resilience", value: (graphSummary?.resilience_metrics as Record<string, unknown>)?.network_resilience_score ?? "—" },
                         ].map(({ label, value }) => (
                             <div key={label} className="card" style={{ padding: 16 }}>
@@ -434,6 +347,21 @@ export default function GraphPage() {
                                     <button onClick={zoomOut} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid var(--border-subtle)", borderRadius: 4, padding: "4px 6px", cursor: "pointer", color: "#94a3b8" }} title="Zoom Out"><ZoomOut size={14} /></button>
                                     <button onClick={zoomFit} style={{ background: "rgba(255,255,255,0.05)", border: "1px solid var(--border-subtle)", borderRadius: 4, padding: "4px 6px", cursor: "pointer", color: "#94a3b8" }} title="Fit to View"><Maximize2 size={14} /></button>
                                 </div>
+
+                                {/* Node Limit Control */}
+                                <div style={{ display: "flex", alignItems: "center", gap: 4, marginLeft: 8 }}>
+                                    <span style={{ fontSize: 10, color: "#64748b" }}>Max nodes:</span>
+                                    <select 
+                                        value={maxNodes}
+                                        onChange={(e) => setMaxNodes(Number(e.target.value))}
+                                        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid var(--border-subtle)", borderRadius: 4, padding: "2px 6px", color: "#94a3b8", fontSize: 10 }}
+                                    >
+                                        <option value={50}>50</option>
+                                        <option value={100}>100</option>
+                                        <option value={200}>200</option>
+                                        <option value={500}>500</option>
+                                    </select>
+                                </div>
                             </div>
                         </div>
                         <div style={{ height: 540, background: "transparent" }} onClick={() => { setHighlightNodes(new Set()); setSelectedNode(null); }}>
@@ -449,14 +377,14 @@ export default function GraphPage() {
                                     linkCanvasObjectMode={() => "replace"}
                                     onNodeClick={handleNodeClick as any}
                                     onNodeHover={handleNodeHover as any}
-                                    cooldownTicks={80}
+                                    cooldownTicks={50}
                                     onEngineStop={() => {
                                         const g = graphRef.current as any;
                                         if (g?.zoomToFit) g.zoomToFit(400, 40);
                                     }}
-                                    warmupTicks={20}
-                                    d3AlphaDecay={0.02}
-                                    d3VelocityDecay={0.3}
+                                    warmupTicks={10}
+                                    d3AlphaDecay={0.05}
+                                    d3VelocityDecay={0.4}
                                 />
                             ) : (
                                 <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--text-muted)", fontSize: 13, gap: 12 }}>

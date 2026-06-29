@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Upload, BarChart3, Network, Bot, Download,
   Brain, Dna, Plug, GitBranch, ChevronLeft, ChevronRight,
-  TrendingUp, Settings,
+  TrendingUp, Settings, Monitor, Users, Workflow,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -18,9 +18,17 @@ const NAV = [
     ],
   },
   {
+    section: "Planning",
+    items: [
+      { label: "S&OP Executive", href: "/sop",        icon: Users        },
+      { label: "Unified IBP",    href: "/ibp-unified", icon: Workflow    },
+    ],
+  },
+  {
     section: "Intelligence",
     items: [
       { label: "Analytics",        href: "/analytics",  icon: BarChart3  },
+      { label: "Reports",          href: "/analytics-reports", icon: BarChart3 },
       { label: "Graph Network",    href: "/graph",      icon: Network    },
       { label: "AI Co-Pilot",      href: "/copilot",    icon: Bot        },
       { label: "Risk Propagation", href: "/causal",     icon: TrendingUp },
@@ -30,9 +38,10 @@ const NAV = [
   {
     section: "Operations",
     items: [
-      { label: "Connectors",  href: "/connectors", icon: Plug      },
-      { label: "Pipeline",    href: "/pipeline",   icon: GitBranch },
-      { label: "Export",      href: "/export",     icon: Download  },
+      { label: "Control Tower",   href: "/control-tower", icon: Monitor    },
+      { label: "Connectors",      href: "/connectors",     icon: Plug      },
+      { label: "Pipeline",        href: "/pipeline",       icon: GitBranch },
+      { label: "Export",          href: "/export",         icon: Download  },
     ],
   },
 ];
@@ -136,7 +145,7 @@ export default function Sidebar() {
                     display:       "flex",
                     alignItems:    "center",
                     gap:           8,
-                    padding:       "7px 12px",
+                    padding:       "8px 12px",
                     paddingLeft:   active ? 10 : 12,
                     borderRadius:  4,
                     borderLeft:    active ? "2px solid var(--color-accent)" : "2px solid transparent",
@@ -145,7 +154,7 @@ export default function Sidebar() {
                     fontSize:      13,
                     textDecoration:"none",
                     whiteSpace:    "nowrap",
-                    transition:    `background 120ms ${T.ease}, color 120ms ${T.ease}`,
+                    transition:    `background 120ms ${T.ease}, color 120ms ${T.ease}, transform 120ms ${T.ease}`,
                     overflow:      "hidden",
                     position:      "relative",
                   }}
@@ -153,16 +162,18 @@ export default function Sidebar() {
                     if (!active) {
                       (e.currentTarget as HTMLElement).style.background = "var(--color-surface-2)";
                       (e.currentTarget as HTMLElement).style.color      = "var(--color-text-1)";
+                      (e.currentTarget as HTMLElement).style.transform = "translateX(2px)";
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!active) {
                       (e.currentTarget as HTMLElement).style.background = "transparent";
                       (e.currentTarget as HTMLElement).style.color      = "var(--color-text-2)";
+                      (e.currentTarget as HTMLElement).style.transform = "translateX(0)";
                     }
                   }}
                 >
-                  <item.icon size={15} style={{ flexShrink: 0 }} />
+                  <item.icon size={15} style={{ flexShrink: 0, transition: "transform 120ms ease" }} />
                   {!collapsed && <span>{item.label}</span>}
                 </Link>
               );

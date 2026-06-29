@@ -2,7 +2,7 @@ import hashlib
 import json
 import secrets
 from datetime import datetime, timezone, timedelta
-from typing import Optional
+from typing import Any, Dict, Iterable, Optional
 
 import bcrypt
 
@@ -113,3 +113,48 @@ def generate_api_key() -> tuple:
     raw_key = f"nxs_{secrets.token_urlsafe(32)}"
     key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
     return raw_key, key_hash
+
+
+SENSITIVE_FIELD_HINTS = {"password", "passwd", "secret", "token", "api_key", "authorization", "ssn", "email", "phone"}
+
+
+def mask_value(value: Any, visible: int = 4) -> Any:
+    """Mask scalar values while preserving enough shape for audit/debug views."""
+    if value is None:
+        return None
+    text = str(value)
+    if len(text) <= visible:
+        return "*" * len(text)
+    return f"{text[:visible]}{'*' * max(4, len(text) - visible)}"
+
+
+def mask_sensitive_data(payload: Any, extra_fields: Optional[Iterable[str]] = None) -> Any:
+    """Recursively mask sensitive fields in dictionaries/lists."""
+    sensitive = SENSITIVE_FIELD_HINTS | {field.lower() for field in (extra_fields or [])}
+    if isinstance(payload, dict):
+        masked: Dict[str, Any] = {}
+        for key, value in payload.items():
+            if any(hint in key.lower() for hint in sensitive):
+                masked[key] = mask_value(value)
+            else:
+                masked[key] = mask_sensitive_data(value, sensitive)
+        return masked
+    if isinstance(payload, list):
+        return [mask_sensitive_data(item, sensitive) for item in payload]
+    return payload
+
+
+def encrypt_field(value: str) -> str:
+    """Lightweight reversible field protection for local/demo deployments."""
+    import base64
+    raw = value.encode()
+    key = SECRET_KEY.encode() or b"nexus"
+    protected = bytes(byte ^ key[index % len(key)] for index, byte in enumerate(raw))
+    return base64.urlsafe_b64encode(protected).decode()
+
+
+def decrypt_field(value: str) -> str:
+    import base64
+    raw = base64.urlsafe_b64decode(value.encode())
+    key = SECRET_KEY.encode() or b"nexus"
+    return bytes(byte ^ key[index % len(key)] for index, byte in enumerate(raw)).decode()

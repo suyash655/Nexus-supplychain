@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
@@ -87,13 +87,25 @@ function riskLevelColor(level: string): string {
 export default function DashboardPage() {
   const router     = useRouter();
   const { showToast } = useToast();
+  const [navigating, setNavigating] = useState<string | null>(null);
 
   const { data: summary, loading: l1 } = useApi<Summary | null>("/analytics/summary", { fallback: DEMO_SUMMARY });
-  const { data: suppliers, loading: l2 } = useApi<RiskSupplier[]>("/analytics/suppliers", { fallback: DEMO_SUPPLIERS });
+  const { data: suppliersResponse, loading: l2 } = useApi<{ data: RiskSupplier[]; total: number; skip: number; limit: number }>("/analytics/suppliers", { fallback: { data: DEMO_SUPPLIERS, total: DEMO_SUPPLIERS.length, skip: 0, limit: 50 } });
   const { data: executive, loading: l3 } = useApi<ExecutiveSummary | null>("/copilot/summary", { fallback: DEMO_EXECUTIVE });
   const { data: anomalies, loading: l4 } = useApi<AnomalyData | null>("/ml/anomalies", { fallback: DEMO_ANOMALIES });
   const { data: timeSeries, loading: l5 } = useApi<any>("/analytics/time-series", { fallback: DEMO_TIME_SERIES });
   const { data: resilience, loading: l6 } = useApi<any>("/graph/resilience", { fallback: DEMO_RESILIENCE });
+
+  const handleNavigation = (path: string, buttonName: string) => {
+    setNavigating(buttonName);
+    // Simulate loading state for better UX
+    setTimeout(() => {
+      router.push(path);
+    }, 300);
+  };
+
+  // Extract suppliers array from paginated response
+  const suppliers = suppliersResponse?.data || DEMO_SUPPLIERS;
 
   const loading = l1 || l2 || l3 || l4 || l5 || l6;
   const isDemo = summary === DEMO_SUMMARY || suppliers === DEMO_SUPPLIERS;
@@ -170,16 +182,18 @@ export default function DashboardPage() {
             </div>
             <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
               <button
-                className="btn btn-secondary"
-                onClick={() => router.push("/analytics")}
+                className={`btn btn-secondary ${navigating === "analytics" ? "loading" : ""}`}
+                onClick={() => handleNavigation("/analytics", "analytics")}
+                disabled={navigating === "analytics"}
               >
-                Deep Analytics
+                {navigating === "analytics" ? "Loading..." : "Deep Analytics"}
               </button>
               <button
-                className="btn btn-primary"
-                onClick={() => router.push("/upload")}
+                className={`btn btn-primary ${navigating === "upload" ? "loading" : ""}`}
+                onClick={() => handleNavigation("/upload", "upload")}
+                disabled={navigating === "upload"}
               >
-                Upload Data
+                {navigating === "upload" ? "Loading..." : "Upload Data"}
               </button>
             </div>
           </div>
@@ -221,12 +235,14 @@ export default function DashboardPage() {
               value={summary?.total_records?.toLocaleString() ?? "0"}
               delta={`${summary?.unique_skus ?? 0} unique SKUs`}
               deltaDir="neutral"
+              onClick={() => handleNavigation("/analytics", "analytics")}
             />
             <KpiCard
               label="Active Suppliers"
               value={summary?.unique_suppliers ?? 0}
               delta={riskTiers.critical > 0 ? `${riskTiers.critical} critical` : "All stable"}
               deltaDir={riskTiers.critical > 0 ? "down" : "up"}
+              onClick={() => handleNavigation("/graph", "graph")}
             />
             <KpiCard
               label="Avg Delay"
@@ -236,12 +252,14 @@ export default function DashboardPage() {
                 (summary?.avg_delay_days ?? 0) > 5 ? "down" :
                 (summary?.avg_delay_days ?? 0) > 2 ? "neutral" : "up"
               }
+              onClick={() => handleNavigation("/analytics", "analytics")}
             />
             <KpiCard
               label="Anomalies Detected"
               value={anomalies?.anomaly_count ?? 0}
               delta={anomalies?.methods_used?.join(", ") ?? "—"}
               deltaDir={anomalies?.anomaly_count ?? 0 > 0 ? "down" : "up"}
+              onClick={() => handleNavigation("/analytics", "analytics")}
             />
           </div>
 

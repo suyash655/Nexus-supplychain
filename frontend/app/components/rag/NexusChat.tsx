@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import './NexusChat.css'
+import { apiPostJSON } from '@/lib/api'
 
 interface Message { role: 'user' | 'assistant'; content: string; sources?: string[] }
 
@@ -18,20 +19,18 @@ export function NexusChat() {
     setLoading(true)
 
     try {
-      // In production, get the real tenant ID from the auth context
-      const res = await fetch('http://localhost:8000/api/rag/query', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: input, tenant_id: 'default' }),
+      const data = await apiPostJSON<{ answer?: string; sources?: string[] }>('/api/rag/query', {
+        question: input,
+        tenant_id: 'default',
       })
-      const data = await res.json()
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: data.answer,
-        sources: data.sources,
+        content: data.answer || 'No answer returned.',
+        sources: data.sources || [],
       }])
-    } catch (e) {
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Error: could not reach Nexus AI.' }])
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not reach Nexus AI.'
+      setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${message}` }])
     } finally {
       setLoading(false)
     }

@@ -14,17 +14,34 @@ from .utils import (
 )
 
 ROLE_PERMISSIONS = {
-    "admin": ["*"],  # Full access
-    "manager": ["read", "write", "export", "manage_team", "configure_connectors"],
-    "analyst": ["read", "write", "export", "run_analysis", "copilot"],
-    "viewer": ["read"],
+    "admin": ["*"],
+    "manager": ["read", "write", "export", "manage_team", "configure_connectors", "connectors:read", "connectors:write", "connectors:execute", "ibp:*", "reports:*"],
+    "analyst": ["read", "write", "export", "run_analysis", "copilot", "connectors:read", "connectors:execute", "ibp:read", "ibp:execute", "reports:read"],
+    "viewer": ["read", "connectors:read", "ibp:read", "reports:read"],
 }
 
 
 def check_permission(user_role: str, required: str) -> bool:
     """Check if a role has a specific permission."""
     perms = ROLE_PERMISSIONS.get(user_role, [])
-    return "*" in perms or required in perms
+    if "*" in perms or required in perms:
+        return True
+    namespace = required.split(":", 1)[0]
+    return f"{namespace}:*" in perms
+
+
+def user_has_permission(user: Dict[str, Any], required: str) -> bool:
+    """Check role permissions plus user-specific permission grants."""
+    role = user.get("role", "viewer")
+    explicit = set(user.get("permissions") or [])
+    return check_permission(role, required) or required in explicit or "*" in explicit
+
+
+def require_permission(user: Dict[str, Any], required: str) -> None:
+    """Raise a FastAPI 403 if the decoded user lacks a permission."""
+    if not user_has_permission(user, required):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail=f"Missing permission: {required}")
 
 
 def _issue_token_pair(db: Session, user: User) -> Dict[str, Any]:

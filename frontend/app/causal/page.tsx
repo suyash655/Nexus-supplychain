@@ -7,7 +7,8 @@ import { AnimatedSection, StaggerGrid, StaggerItem } from "../components/Animate
 import {
   Dna, Zap, Target, Shield, ArrowRight, AlertTriangle, Search,
 } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { apiFetchJSON, apiPostJSON } from "@/lib/api";
+import { useToast } from "../components/ToastContext";
 
 type CausalChain = {
   node: string; name: string; type: string;
@@ -23,36 +24,46 @@ type FragilityNode = {
 };
 
 export default function CausalPage() {
+  const { showToast } = useToast();
   const [buildResult, setBuildResult] = useState<any>(null);
   const [interventionTarget, setInterventionTarget] = useState("");
   const [interventionResult, setInterventionResult] = useState<any>(null);
   const [fragility, setFragility] = useState<any>(null);
   const [building, setBuilding] = useState(false);
   const [querying, setQuerying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const buildGenome = async () => {
     setBuilding(true);
+    setError(null);
     try {
-      const res = await apiFetch(`/causal/build`, { method: "POST" });
-      setBuildResult(await res.json());
-      // Auto-load fragility
-      const frag = await apiFetch(`/causal/fragility`).then(r => r.json());
+      const result = await apiPostJSON(`/causal/build`, {});
+      setBuildResult(result);
+      const frag = await apiFetchJSON(`/causal/fragility`);
       setFragility(frag);
     } catch (err) {
-      console.error(err);
+      const message = err instanceof Error ? err.message : "Unable to build causal graph";
+      setError(message);
+      showToast(message, "error");
     } finally {
       setBuilding(false);
     }
   };
 
   const runIntervention = async () => {
-    if (!interventionTarget) return;
+    const target = interventionTarget.trim();
+    if (!target) {
+      showToast("Enter a supplier name, node ID, or region first.", "warning");
+      return;
+    }
     setQuerying(true);
+    setError(null);
     try {
-      const res = await apiFetch(`/causal/intervene?target=${encodeURIComponent(interventionTarget)}&action=remove`);
-      setInterventionResult(await res.json());
+      setInterventionResult(await apiFetchJSON(`/causal/intervene?target=${encodeURIComponent(target)}&action=remove`));
     } catch (err) {
-      console.error(err);
+      const message = err instanceof Error ? err.message : "Intervention query failed";
+      setError(message);
+      showToast(message, "error");
     } finally {
       setQuerying(false);
     }
@@ -98,6 +109,12 @@ export default function CausalPage() {
             <Dna size={16} /> {building ? "Building graph..." : "Build Risk Graph"}
           </button>
         </div>
+
+        {error && (
+          <div className="card" style={{ marginBottom: 20, padding: 16, color: "#ef4444", border: "1px solid rgba(239,68,68,0.35)" }}>
+            {error}
+          </div>
+        )}
 
         {/* Build Result Stats */}
         {buildResult && !buildResult.error && (

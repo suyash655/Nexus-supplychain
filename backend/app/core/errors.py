@@ -39,6 +39,13 @@ ErrorCode = Literal[
     "engine_unavailable",
     "no_data",
     "internal_error",
+    "rate_limit_exceeded",
+    "quota_exceeded",
+    "conflict_error",
+    "permission_denied",
+    "invalid_operation",
+    "service_unavailable",
+    "timeout_error",
 ]
 
 
@@ -114,6 +121,41 @@ class NoDataError(NexusError):
     error_code = "no_data"
 
 
+class RateLimitExceededError(NexusError):
+    http_status = 429
+    error_code = "rate_limit_exceeded"
+
+
+class QuotaExceededError(NexusError):
+    http_status = 429
+    error_code = "quota_exceeded"
+
+
+class ConflictError(NexusError):
+    http_status = 409
+    error_code = "conflict_error"
+
+
+class PermissionDeniedError(NexusError):
+    http_status = 403
+    error_code = "permission_denied"
+
+
+class InvalidOperationError(NexusError):
+    http_status = 400
+    error_code = "invalid_operation"
+
+
+class ServiceUnavailableError(NexusError):
+    http_status = 503
+    error_code = "service_unavailable"
+
+
+class TimeoutError(NexusError):
+    http_status = 504
+    error_code = "timeout_error"
+
+
 # ── FastAPI exception handlers (register these on the `app` object) ───────────
 
 def _get_request_id(request: Request) -> str:
@@ -136,14 +178,22 @@ async def nexus_error_handler(request: Request, exc: NexusError) -> JSONResponse
 async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
     """Convert legacy HTTPException (raised by existing routers) to the envelope."""
     # Map HTTP status → error code
-    if exc.status_code == 401 or exc.status_code == 403:
+    if exc.status_code == 401:
         code: ErrorCode = "auth_error"
+    elif exc.status_code == 403:
+        code = "permission_denied"
     elif exc.status_code == 404:
         code = "not_found"
+    elif exc.status_code == 409:
+        code = "conflict_error"
     elif exc.status_code in (400, 422):
         code = "validation_error"
+    elif exc.status_code == 429:
+        code = "rate_limit_exceeded"
     elif exc.status_code == 503:
-        code = "engine_unavailable"
+        code = "service_unavailable"
+    elif exc.status_code == 504:
+        code = "timeout_error"
     else:
         code = "internal_error"
 

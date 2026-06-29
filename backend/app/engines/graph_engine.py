@@ -373,20 +373,31 @@ class SupplyChainGraph:
         if not self._built or self.G.number_of_nodes() == 0:
             return {"degree": [], "betweenness": [], "pagerank": []}
 
-        degree = nx.degree_centrality(self.G)
+        try:
+            degree = nx.degree_centrality(self.G)
+        except Exception as e:
+            logger_ge.error(f"Failed to compute degree centrality: {e}")
+            degree = {}
 
         # Use risk_weight: high-risk edges are "costly" to traverse,
         # surfacing nodes on unavoidably risky paths as high-centrality.
-        betweenness = nx.betweenness_centrality(self.G, weight="risk_weight")
+        try:
+            betweenness = nx.betweenness_centrality(self.G, weight="risk_weight")
+        except Exception as e:
+            logger_ge.error(f"Failed to compute betweenness centrality: {e}")
+            betweenness = {}
 
         try:
             pagerank = nx.pagerank(self.G, weight="risk_weight")
-        except Exception:
+        except Exception as e:
+            logger_ge.error(f"Failed to compute PageRank: {e}")
             pagerank = {n: 1.0 / self.G.number_of_nodes() for n in self.G.nodes()}
 
         def format_scores(scores: dict, metric_name: str) -> List[Dict]:
             result = []
             for node, score in sorted(scores.items(), key=lambda x: x[1], reverse=True):
+                if node not in self.G.nodes:
+                    continue
                 data = self.G.nodes[node]
                 result.append({
                     "node_id": node,
@@ -422,16 +433,20 @@ class SupplyChainGraph:
         # BFS for collective downstream impact
         all_affected = set()
         for start_node in resolved_nodes:
-            successors = list(self.G.successors(start_node))
-            queue = list(successors)[:100] # type: ignore
-            visited = {start_node}
-            while queue:
-                current = queue.pop(0)
-                if str(current) in visited:
-                    continue
-                visited.add(str(current))
-                all_affected.add(str(current))
-                queue.extend([str(s) for s in self.G.successors(current)])
+            try:
+                successors = list(self.G.successors(start_node))
+                queue = list(successors)[:100] # type: ignore
+                visited = {start_node}
+                while queue:
+                    current = queue.pop(0)
+                    if str(current) in visited:
+                        continue
+                    visited.add(str(current))
+                    all_affected.add(str(current))
+                    queue.extend([str(s) for s in self.G.successors(current)])
+            except Exception as e:
+                logger_ge.error(f"Error simulating cascade from {start_node}: {e}")
+                continue
 
         # Remove failed nodes from affected (they are the cause)
         for fn in resolved_nodes:
@@ -440,6 +455,8 @@ class SupplyChainGraph:
 
         affected_details = []
         for node in all_affected:
+            if node not in self.G.nodes:
+                continue
             data = self.G.nodes[node]
             ttr_base = {"supplier": 14, "warehouse": 7, "sku": 5, "region": 3}.get(data.get("type"), 5)
             affected_details.append({
@@ -449,11 +466,12 @@ class SupplyChainGraph:
                 "estimated_ttr_days": ttr_base,
             })
 
+        primary_node = resolved_nodes[0] if resolved_nodes else ""
         return {
             "failed_nodes": resolved_nodes,
             "total_affected": len(all_affected),
             "affected_details": list(affected_details)[:50], # type: ignore
-            "risk_assessment": self._cascade_risk(resolved_nodes[0], all_affected), # Use primary for risk
+            "risk_assessment": self._cascade_risk(primary_node, all_affected) if primary_node else "unknown",
             "recovery_complexity": "High" if len(all_affected) > 15 or len(resolved_nodes) > 2 else "Medium" if len(all_affected) > 5 else "Low",
         }
 
@@ -603,11 +621,21 @@ class SupplyChainGraph:
         if not self._built or self.G.number_of_nodes() == 0:
             return []
 
-        betweenness = nx.betweenness_centrality(self.G, weight="risk_weight")
+        try:
+            betweenness = nx.betweenness_centrality(self.G, weight="risk_weight")
+        except Exception as e:
+            logger_ge.error(f"Failed to compute betweenness centrality: {e}")
+            betweenness = {}
+
+        if not betweenness:
+            return []
+
         bottlenecks = sorted(betweenness.items(), key=lambda x: x[1], reverse=True)[:5]
 
         critical_paths = []
         for node, score in bottlenecks:
+            if node not in self.G.nodes:
+                continue
             data = self.G.nodes[node]
             critical_paths.append({
                 "node_id": node,

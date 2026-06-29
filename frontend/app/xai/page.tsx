@@ -5,58 +5,37 @@ import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { SafeMarkdown } from "../components/SafeMarkdown";
 import { SynBarChart } from "../components/Charts";
-import { apiFetch } from "@/lib/api";
+import { apiFetchJSON } from "@/lib/api";
+import { useToast } from "../components/ToastContext";
 import { Brain, ArrowDownRight } from "lucide-react";
 
-// Demo data for when backend is unavailable
-const DEMO_IMPORTANCE = {
-    features: [
-        { rank: 1, feature: "delay_days", importance: 0.42, permutation_importance: 0.38 },
-        { rank: 2, feature: "cost", importance: 0.28, permutation_importance: 0.25 },
-        { rank: 3, feature: "quality_score", importance: 0.15, permutation_importance: 0.13 },
-        { rank: 4, feature: "lead_time", importance: 0.09, permutation_importance: 0.11 },
-        { rank: 5, feature: "shipment_count", importance: 0.06, permutation_importance: 0.05 },
-    ],
-    interpretation: "**delay_days** is the strongest predictor of supplier risk, contributing 42% of the model's decision. **cost** follows at 28%, indicating that high-cost shipments correlate with elevated risk.",
-    model_score: 0.87,
-    target: "risk_score",
-};
-
-const DEMO_COUNTERFACTUALS: any[] = [
-    {
-        supplier: "Apex Materials", tier: "critical", current_risk_score: 82, best_action: "Reduce avg delay to 4d",
-        counterfactuals: [
-            { change: "Reduce delay", current_value: "8.3d", target_value: "4.0d", risk_reduction: 18.5, new_risk_score: 63.5 },
-            { change: "Improve quality", current_value: "72%", target_value: "90%", risk_reduction: 8.2, new_risk_score: 73.8 },
-        ],
-    },
-];
-
 export default function XAIPage() {
+    const { showToast } = useToast();
     const [importance, setImportance] = useState<any>(null);
     const [counterfactuals, setCounterfactuals] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         async function load() {
+            setError(null);
             try {
-                const [impRes, cfRes] = await Promise.all([
-                    apiFetch(`/xai/feature-importance`),
-                    apiFetch(`/xai/counterfactuals`),
+                const [importanceResult, counterfactualResult] = await Promise.all([
+                    apiFetchJSON(`/xai/feature-importance`),
+                    apiFetchJSON<{ data?: any[] }>(`/xai/counterfactuals`),
                 ]);
-                if (!impRes.ok || !cfRes.ok) throw new Error("XAI API failed");
-                setImportance(await impRes.json());
-                setCounterfactuals(await cfRes.json());
-            } catch {
-                // Fallback to demo data
-                setImportance(DEMO_IMPORTANCE);
-                setCounterfactuals(DEMO_COUNTERFACTUALS);
+                setImportance(importanceResult);
+                setCounterfactuals(counterfactualResult.data || []);
+            } catch (err) {
+                const message = err instanceof Error ? err.message : "Unable to load XAI explanations";
+                setError(message);
+                showToast(message, "error");
             } finally {
                 setLoading(false);
             }
         }
         load();
-    }, []);
+    }, [showToast]);
 
     if (loading) {
         return (
@@ -83,6 +62,11 @@ export default function XAIPage() {
             <div className="main-wrapper">
             <TopNav />
             <main className="main-content">
+                {error && (
+                    <div className="card" style={{ marginBottom: 20, padding: 16, color: "#ef4444", border: "1px solid rgba(239,68,68,0.35)" }}>
+                        {error}
+                    </div>
+                )}
                 <div style={{ marginBottom: 24 }}>
                     <h1 style={{ fontFamily: "var(--font-plex)", fontSize: 28, fontWeight: 700, marginBottom: 4 }}>
                         <Brain size={24} style={{ display: "inline", marginRight: 10, verticalAlign: "middle" }} />

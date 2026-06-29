@@ -47,7 +47,7 @@ export default function NotFound() {
             marginBottom: 32,
           }}
         >
-          The page you're looking for doesn't exist or has been moved.
+          The page you&apos;re looking for doesn&apos;t exist or has been moved.
         </p>
 
         <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>

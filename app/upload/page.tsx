@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string>("");
+  const [analysisStatus, setAnalysisStatus] = useState<string>("");
   const router = useRouter();
 
   const handleUpload = async () => {
@@ -18,28 +20,100 @@ export default function UploadPage() {
     formData.append("file", file);
 
     setLoading(true);
+    setUploadStatus("Uploading file...");
+    setAnalysisStatus("");
 
     try {
-      const res = await fetch("http://localhost:8000/upload", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      const token = localStorage.getItem("nexus_token");
+      
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const res = await fetch(`${apiUrl}/upload`, {
         method: "POST",
+        headers,
         body: formData,
       });
 
       const data = await res.json();
 
-      if (data.status !== "success") {
-        alert("Upload failed or invalid CSV");
+      if (!res.ok) {
+        const errorMsg = data.detail || data.message || "Upload failed";
+        alert(`Upload failed: ${errorMsg}`);
+        setUploadStatus(`Upload failed: ${errorMsg}`);
+        setLoading(false);
         return;
       }
 
-      // ✅ Redirect ONLY after confirmed upload
-      router.push("/upload/map");
+      if (data.status !== "success") {
+        alert("Upload failed or invalid CSV");
+        setUploadStatus("Upload failed");
+        setLoading(false);
+        return;
+      }
+
+      setUploadStatus(`Upload successful! ${data.rows_inserted} rows inserted.`);
+
+      // Check if analysis started
+      if (data.analysis_started && data.upload_id) {
+        setAnalysisStatus("Analysis started in background...");
+        
+        // Poll for analysis progress
+        pollAnalysisProgress(data.upload_id, apiUrl);
+      } else {
+        // No analysis or analysis skipped
+        setTimeout(() => {
+          router.push("/dashboard");
+        }, 1000);
+      }
 
     } catch (err) {
       alert("Upload failed. Check backend.");
+      setUploadStatus("Upload failed");
     } finally {
-      setLoading(false);
+      if (!analysisStatus) {
+        setLoading(false);
+      }
     }
+  };
+
+  const pollAnalysisProgress = async (uploadId: string, apiUrl: string) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`${apiUrl}/analysis/progress/${uploadId}`);
+        const progress = await res.json();
+        
+        if (progress) {
+          const percentage = Math.round(progress.progress_percentage);
+          setAnalysisStatus(`Analysis in progress: ${percentage}% (${progress.completed_stages}/${progress.total_stages} stages)`);
+          
+          if (progress.status === "completed" || progress.status === "partial" || progress.status === "failed") {
+            clearInterval(pollInterval);
+            setLoading(false);
+            setAnalysisStatus(`Analysis ${progress.status}. Redirecting to mapping...`);
+            
+            setTimeout(() => {
+              router.push("/upload/map");
+            }, 1500);
+          }
+        }
+      } catch (err) {
+        console.error("Error polling analysis progress:", err);
+      }
+    }, 2000); // Poll every 2 seconds
+
+    // Safety timeout after 5 minutes
+    setTimeout(() => {
+      clearInterval(pollInterval);
+      setLoading(false);
+      setAnalysisStatus("Analysis taking longer than expected. You can proceed to mapping.");
+      setTimeout(() => {
+        router.push("/upload/map");
+      }, 2000);
+    }, 300000); // 5 minutes
   };
 
   return (
@@ -65,6 +139,19 @@ export default function UploadPage() {
                      hover:file:opacity-90"
         />
 
+        {/* Status Messages */}
+        {uploadStatus && (
+          <div className="mt-4 p-3 rounded-lg bg-white/5 border border-white/10 text-sm">
+            {uploadStatus}
+          </div>
+        )}
+        
+        {analysisStatus && (
+          <div className="mt-4 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-sm">
+            {analysisStatus}
+          </div>
+        )}
+
         {/* 🔑 IMPORTANT FIX: type="button" */}
         <button
           type="button"
@@ -73,7 +160,7 @@ export default function UploadPage() {
           className="mt-6 w-full rounded-lg bg-white/10 py-3
                      hover:bg-white/20 transition disabled:opacity-50"
         >
-          {loading ? "Uploading..." : "Upload & Analyze"}
+          {loading ? "Processing..." : "Upload & Analyze"}
         </button>
       </div>
     </main>

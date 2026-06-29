@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { AnimatedSection } from "../components/Animated";
 import {
   GitBranch, CheckCircle, XCircle, Clock, BarChart3, ArrowDown, ArrowUp, Shield,
 } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { apiFetchJSON, apiPostJSON } from "@/lib/api";
+import { useToast } from "../components/ToastContext";
 
 type PipelineRun = {
   id: number; name: string; status: string;
@@ -21,38 +22,46 @@ type QualityCheck = {
 };
 
 export default function PipelinePage() {
+  const { showToast } = useToast();
   const [runs, setRuns] = useState<PipelineRun[]>([]);
   const [qualityReport, setQualityReport] = useState<any>(null);
   const [lineage, setLineage] = useState<any[]>([]);
   const [checking, setChecking] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
+    setError(null);
     try {
       const [runsRes, lineageRes] = await Promise.all([
-        apiFetch(`/pipeline/history`).then(r => r.json()),
-        apiFetch(`/pipeline/lineage`).then(r => r.json()),
+        apiFetchJSON<{ runs?: PipelineRun[] }>(`/pipeline/history`),
+        apiFetchJSON<{ lineage?: any[] }>(`/pipeline/lineage`),
       ]);
       setRuns(runsRes.runs || []);
       setLineage(lineageRes.lineage || []);
     } catch (err) {
-      console.error(err);
+      const message = err instanceof Error ? err.message : "Unable to load pipeline data";
+      setError(message);
+      showToast(message, "error");
     } finally {
       setLoading(false);
     }
-  };
+  }, [showToast]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const runQualityCheck = async () => {
     setChecking(true);
+    setError(null);
     try {
-      const res = await apiFetch(`/pipeline/quality-check`, { method: "POST" });
-      setQualityReport(await res.json());
+      setQualityReport(await apiPostJSON(`/pipeline/quality-check`, {}));
+      showToast("Quality check completed.", "success");
     } catch (err) {
-      console.error(err);
+      const message = err instanceof Error ? err.message : "Quality check failed";
+      setError(message);
+      showToast(message, "error");
     } finally {
       setChecking(false);
     }
@@ -74,6 +83,11 @@ export default function PipelinePage() {
       <div className="main-wrapper">
         <TopNav />
         <main className="main-content">
+        {error && (
+          <div className="card" style={{ marginBottom: 20, padding: 16, color: "#ef4444", border: "1px solid rgba(239,68,68,0.35)" }}>
+            {error}
+          </div>
+        )}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>

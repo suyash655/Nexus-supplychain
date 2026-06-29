@@ -282,6 +282,13 @@ class APIConnector(BaseConnector):
 
 
 # ──────────────────────────────────────────────
+from app.connectors.sap_connector import SAPConnector
+from app.connectors.mes_connector import MESConnector
+from app.connectors.wms_connector import WMSConnector
+from app.connectors.tms_connector import TMSConnector
+from app.connectors.universal_connector import UniversalRESTConnector, UniversalSOAPConnector
+
+
 # Connector Registry
 # ──────────────────────────────────────────────
 
@@ -290,6 +297,13 @@ CONNECTOR_REGISTRY: Dict[str, type] = {
     "database": DatabaseConnector,
     "s3": S3Connector,
     "api": APIConnector,
+    "sap": SAPConnector,
+    "mes": MESConnector,
+    "wms": WMSConnector,
+    "tms": TMSConnector,
+    "universal_rest": UniversalRESTConnector,
+    "universal_soap": UniversalSOAPConnector,
+    "universal": UniversalRESTConnector,
 }
 
 

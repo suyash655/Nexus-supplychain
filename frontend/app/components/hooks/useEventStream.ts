@@ -83,6 +83,7 @@ export function useEventStream(options: UseEventStreamOptions = {}): UseEventStr
   const eventSourceRef = useRef<EventSource | null>(null)
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mountedRef = useRef(true)
+  const connectRef = useRef<() => void>(() => {})
 
   const buildUrl = useCallback(() => {
     const base = `${API_BASE}${url}`
@@ -167,12 +168,16 @@ export function useEventStream(options: UseEventStreamOptions = {}): UseEventStr
         reconnectTimerRef.current = setTimeout(() => {
           if (mountedRef.current) {
             console.log('[useEventStream] Reconnecting...')
-            connect()
+            connectRef.current()
           }
         }, reconnectDelay)
       }
     }
   }, [buildUrl, maxEvents, autoReconnect, reconnectDelay, onEvent])
+
+  useEffect(() => {
+    connectRef.current = connect
+  }, [connect])
 
   const reconnect = useCallback(() => {
     disconnect()

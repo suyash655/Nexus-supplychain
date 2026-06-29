@@ -13,10 +13,58 @@ export default function LoginPage() {
   const [fullName, setFullName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email) {
+      errors.email = "Email is required";
+    } else if (!emailRegex.test(email)) {
+      errors.email = "Please enter a valid email address";
+    }
+
+    // Password validation
+    if (!password) {
+      errors.password = "Password is required";
+    } else if (password.length < 8) {
+      errors.password = "Password must be at least 8 characters";
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+      errors.password = "Password must contain uppercase, lowercase, and number";
+    }
+
+    // Registration-specific validation
+    if (mode === "register") {
+      if (!username) {
+        errors.username = "Username is required";
+      } else if (username.length < 3) {
+        errors.username = "Username must be at least 3 characters";
+      } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+        errors.username = "Username can only contain letters, numbers, and underscores";
+      }
+
+      if (!fullName) {
+        errors.fullName = "Full name is required";
+      } else if (fullName.length < 2) {
+        errors.fullName = "Full name must be at least 2 characters";
+      }
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setFieldErrors({});
+
+    if (!validateForm()) {
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -55,8 +103,16 @@ export default function LoginPage() {
   };
 
   const handleDemoAccess = () => {
-    // Set a demo token so middleware allows access
-    document.cookie = `nexus_token=demo; path=/; max-age=${60 * 60 * 24}; SameSite=Lax`;
+    // Set a demo mode flag for development purposes only
+    // In production, this should be removed or require admin authentication
+    if (process.env.NODE_ENV === 'production') {
+      setError("Demo mode is disabled in production");
+      return;
+    }
+    
+    localStorage.setItem("nexus_demo_mode", "true");
+    localStorage.setItem("nexus_token", "demo_" + Date.now());
+    document.cookie = `nexus_token=demo_${Date.now()}; path=/; max-age=${60 * 60 * 24}; SameSite=Lax`;
     router.push("/dashboard");
   };
 
@@ -138,12 +194,38 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit}>
           {mode === "register" && (
             <>
-              <InputField label="Full Name" value={fullName} onChange={setFullName} placeholder="John Doe" />
-              <InputField label="Username" value={username} onChange={setUsername} placeholder="johndoe" />
+              <InputField 
+                label="Full Name" 
+                value={fullName} 
+                onChange={setFullName} 
+                placeholder="John Doe" 
+                error={fieldErrors.fullName}
+              />
+              <InputField 
+                label="Username" 
+                value={username} 
+                onChange={setUsername} 
+                placeholder="johndoe" 
+                error={fieldErrors.username}
+              />
             </>
           )}
-          <InputField label="Email" value={email} onChange={setEmail} type="email" placeholder="john@company.com" />
-          <InputField label="Password" value={password} onChange={setPassword} type="password" placeholder="••••••••" />
+          <InputField 
+            label="Email" 
+            value={email} 
+            onChange={setEmail} 
+            type="email" 
+            placeholder="john@company.com" 
+            error={fieldErrors.email}
+          />
+          <InputField 
+            label="Password" 
+            value={password} 
+            onChange={setPassword} 
+            type="password" 
+            placeholder="••••••••" 
+            error={fieldErrors.password}
+          />
 
           {error && (
             <div style={{
@@ -195,8 +277,8 @@ export default function LoginPage() {
   );
 }
 
-function InputField({ label, value, onChange, type = "text", placeholder = "" }: {
-  label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string;
+function InputField({ label, value, onChange, type = "text", placeholder = "", error = "" }: {
+  label: string; value: string; onChange: (v: string) => void; type?: string; placeholder?: string; error?: string;
 }) {
   return (
     <div style={{ marginBottom: 16 }}>
@@ -212,14 +294,19 @@ function InputField({ label, value, onChange, type = "text", placeholder = "" }:
         style={{
           width: "100%", padding: "12px 14px",
           background: "rgba(15, 23, 42, 0.8)",
-          border: "1px solid rgba(148, 163, 184, 0.12)",
+          border: error ? "1px solid rgba(239, 68, 68, 0.5)" : "1px solid rgba(148, 163, 184, 0.12)",
           borderRadius: 10, color: "#f1f5f9", fontSize: 14,
           outline: "none", transition: "border-color 0.2s",
           boxSizing: "border-box",
         }}
-        onFocus={e => e.target.style.borderColor = "rgba(6, 182, 212, 0.5)"}
-        onBlur={e => e.target.style.borderColor = "rgba(148, 163, 184, 0.12)"}
+        onFocus={e => e.target.style.borderColor = error ? "rgba(239, 68, 68, 0.5)" : "rgba(6, 182, 212, 0.5)"}
+        onBlur={e => e.target.style.borderColor = error ? "rgba(239, 68, 68, 0.5)" : "rgba(148, 163, 184, 0.12)"}
       />
+      {error && (
+        <div style={{ fontSize: 11, color: "#ef4444", marginTop: 4 }}>
+          {error}
+        </div>
+      )}
     </div>
   );
 }

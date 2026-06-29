@@ -42,6 +42,7 @@ from app.core.errors import (  # type: ignore
     validation_exception_handler,
     unhandled_exception_handler,
 )
+from app.middleware.audit import AuditMiddleware  # type: ignore
 
 # ── Crash loudly if running in production with the default secret ──
 settings.validate()
@@ -96,11 +97,28 @@ class SafeJSONResponse(JSONResponse):
 
     def render(self, content) -> bytes:
         return json.dumps(
-            content,
+            self._sanitize(content),
             ensure_ascii=False,
             allow_nan=False,
             default=self._default_serializer,
         ).encode("utf-8")
+
+    @classmethod
+    def _sanitize(cls, obj):
+        if isinstance(obj, float):
+            return None if (math.isnan(obj) or math.isinf(obj)) else obj
+        if isinstance(obj, (np.floating,)):
+            v = float(obj)
+            return None if (math.isnan(v) or math.isinf(v)) else v
+        if isinstance(obj, (np.integer,)):
+            return int(obj)
+        if isinstance(obj, np.ndarray):
+            return cls._sanitize(obj.tolist())
+        if isinstance(obj, dict):
+            return {key: cls._sanitize(value) for key, value in obj.items()}
+        if isinstance(obj, (list, tuple, set)):
+            return [cls._sanitize(value) for value in obj]
+        return obj
 
     @staticmethod
     def _default_serializer(obj):
@@ -140,6 +158,8 @@ class AppEngines:
     kpi_engine_instance = None
     data_scheduler = None
     tgnn_engine_instance = None
+    sop_engine = None
+    response_planning_engine = None
 
     # Tracks which engines failed to initialise
     failed_engines: list = []
@@ -180,6 +200,10 @@ async def lifespan(app: FastAPI):
     logged, and never prevent the server from binding its port.
     """
     # ── Create DB tables ──
+    # Import all models to ensure they're registered with Base.metadata
+    from app.connectors import ConnectorConfig, DataLineage  # type: ignore
+    from app.pipeline import PipelineRun, MetricDefinition  # type: ignore
+    
     Base.metadata.create_all(bind=engine)
     logger.info("[NEXUS] Database tables verified/created")
 
@@ -215,6 +239,20 @@ async def lifespan(app: FastAPI):
     engines.kpi_engine_instance=_init_engine("KPIEngine",             KPIEngine)
     engines.tgnn_engine_instance=_init_engine("TGNNEngine",           TGNNEngine)
 
+    # SAP IBP Engines
+    from app.engines.sop_engine import SOPEngine  # type: ignore
+    from app.engines.response_planning import ResponsePlanningEngine  # type: ignore
+    engines.sop_engine = _init_engine("SOPEngine", SOPEngine)
+    engines.response_planning_engine = _init_engine("ResponsePlanningEngine", ResponsePlanningEngine)
+
+    # Initialize API Gateway
+    from app.core.api_gateway import api_gateway  # type: ignore
+    try:
+        api_gateway.initialize()
+        logger.info("[NEXUS] ✓ API Gateway initialized")
+    except Exception as exc:
+        logger.error("[NEXUS] ✗ API Gateway failed to initialize: %s", exc)
+
     # Scheduler last — it starts background threads
     engines.data_scheduler    = _init_engine("DataScheduler",         DataScheduler)
     if engines.data_scheduler:
@@ -223,6 +261,16 @@ async def lifespan(app: FastAPI):
             logger.info("[NEXUS] ✓ DataScheduler started")
         except Exception as exc:
             logger.error("[NEXUS] ✗ DataScheduler failed to start: %s", exc, exc_info=True)
+
+    # Set engine kwargs for orchestrator (avoid circular import)
+    set_engine_kwargs(
+        ml_analyzer=engines.ml_analyzer,
+        graph_engine=engines.graph_engine,
+        ai_copilot=engines.ai_copilot,
+        xai_engine=engines.xai_engine,
+        monte_carlo_engine=engines.monte_carlo_engine,
+        kpi_engine_instance=engines.kpi_engine_instance,
+    )
 
     if engines.failed_engines:
         logger.warning(
@@ -274,6 +322,7 @@ app.add_middleware(
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
+app.add_middleware(AuditMiddleware)
 
 # ── Rate-limit error handler (slowapi) ──
 app.state.limiter = __import__("app.routers.auth_routes", fromlist=["limiter"]).limiter
@@ -321,20 +370,7 @@ async def request_logging_middleware(request: Request, call_next):
 # Orchestrator helper — called by upload router
 # ============================================================
 
-def _get_engine_kwargs() -> dict:
-    """
-    Return current engine singletons as kwargs for the analysis orchestrator.
-    Engines that failed to initialise are passed as None; the orchestrator
-    skips stages whose engine is None.
-    """
-    return {
-        "ml_analyzer":          engines.ml_analyzer,
-        "graph_engine":         engines.graph_engine,
-        "ai_copilot":           engines.ai_copilot,
-        "xai_engine":           engines.xai_engine,
-        "monte_carlo_engine":   engines.monte_carlo_engine,
-        "kpi_engine_instance":  engines.kpi_engine_instance,
-    }
+from app.core.orchestrator import set_engine_kwargs  # type: ignore
 
 
 # ============================================================
@@ -351,6 +387,7 @@ from app.routers.events import router as events_router  # type: ignore
 from app.routers.health import router as health_router  # type: ignore
 from app.routers.rag import router as rag_router  # type: ignore
 from app.routers.suppliers import router as suppliers_router  # type: ignore
+from app.routers.analysis import router as analysis_router  # type: ignore
 from app.routers.remaining import (  # type: ignore
     xai_router,
     export_router,
@@ -360,6 +397,20 @@ from app.routers.remaining import (  # type: ignore
     scheduler_router,
     system_router,
 )
+from app.routers.sop import router as sop_router  # type: ignore
+from app.routers.response_planning import router as response_planning_router  # type: ignore
+from app.routers.graphql import router as graphql_router  # type: ignore
+from app.routers.websocket import router as websocket_router  # type: ignore
+from app.routers.data_management import router as data_management_router  # type: ignore
+from app.routers.advanced_analytics import router as advanced_analytics_router  # type: ignore
+from app.routers.batch_operations import router as batch_operations_router  # type: ignore
+from app.routers.export_reporting import router as export_reporting_router  # type: ignore
+from app.routers.monitoring import router as monitoring_router  # type: ignore
+from app.routers.control_tower import router as control_tower_router  # type: ignore
+from app.routers.inventory_optimization import router as inventory_optimization_router  # type: ignore
+from app.routers.analytics_reporting import router as analytics_reporting_router  # type: ignore
+from app.routers.connectors import router as enterprise_connectors_router  # type: ignore
+from app.routers.ibp_orchestrator import router as ibp_orchestrator_router  # type: ignore
 
 app.include_router(upload_router)
 app.include_router(analytics_router)
@@ -371,13 +422,27 @@ app.include_router(events_router)
 app.include_router(health_router)
 app.include_router(rag_router)
 app.include_router(suppliers_router)
+app.include_router(analysis_router)
+app.include_router(enterprise_connectors_router)
 app.include_router(xai_router)
 app.include_router(export_router)
-app.include_router(connectors_router)
 app.include_router(pipeline_router)
 app.include_router(causal_router)
 app.include_router(scheduler_router)
 app.include_router(system_router)
+app.include_router(sop_router)
+app.include_router(response_planning_router)
+app.include_router(graphql_router)
+app.include_router(websocket_router)
+app.include_router(data_management_router)
+app.include_router(advanced_analytics_router)
+app.include_router(batch_operations_router)
+app.include_router(export_reporting_router)
+app.include_router(monitoring_router)
+app.include_router(control_tower_router)
+app.include_router(inventory_optimization_router)
+app.include_router(analytics_reporting_router)
+app.include_router(ibp_orchestrator_router)
 
 
 # ============================================================

@@ -10,7 +10,7 @@ import logging
 import threading
 import traceback
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any, Optional, Dict
 
 import pandas as pd  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
@@ -31,6 +31,19 @@ def is_analyzing() -> bool:
 
 import os as _os
 _MAX_ANALYSIS_ROWS: int = int(_os.getenv("MAX_ANALYSIS_ROWS", "100000"))
+
+# ── Engine kwargs helper (for upload router) ──
+# This is defined here to avoid circular import with main.py
+_engine_kwargs_cache: Dict[str, Any] = {}
+
+def set_engine_kwargs(**kwargs) -> None:
+    """Set engine kwargs from main.py during startup."""
+    global _engine_kwargs_cache
+    _engine_kwargs_cache = kwargs
+
+def _get_engine_kwargs() -> Dict[str, Any]:
+    """Return current engine singletons as kwargs for the analysis orchestrator."""
+    return _engine_kwargs_cache
 
 
 def _load_dataframe(max_rows: int = _MAX_ANALYSIS_ROWS) -> pd.DataFrame:
@@ -162,6 +175,7 @@ def run_full_analysis(
                     "critical_paths": graph_engine.find_critical_paths(),
                     "visualization": graph_engine.get_nodes_and_edges(),
                     "resilience": graph_engine.get_resilience_metrics(),
+                    "deep_tier": graph_engine.deep_tier_inference(df),
                 }
                 save_analysis_result(db, "graph", graph_res)
                 logger.info("[NEXUS] ✓ Graph analysis complete")

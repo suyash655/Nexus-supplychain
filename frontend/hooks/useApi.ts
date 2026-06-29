@@ -39,6 +39,7 @@ interface UseApiOptions<T> {
   fallback?: T; // Value to use when data is null/error
   enabled?: boolean; // Skip fetching if false
   timeout?: number; // Request timeout in milliseconds (default: 8000)
+  showError?: boolean; // Show error toast on failure (default: false)
 }
 
 export function useApi<T>(path: string, options: UseApiOptions<T> = {}) {
@@ -47,6 +48,7 @@ export function useApi<T>(path: string, options: UseApiOptions<T> = {}) {
     fallback,
     enabled = true,
     timeout = 8000,
+    showError = false,
   } = options;
 
   const [data, setData] = useState<T | null>(() => {
@@ -62,11 +64,16 @@ export function useApi<T>(path: string, options: UseApiOptions<T> = {}) {
 
   const [loading, setLoading] = useState(!cache.has(path) && enabled);
   const [error, setError] = useState<ApiError | null>(null);
+  const [isDemoMode, setIsDemoMode] = useState(false);
 
   const fetchRef = useRef(0);
 
   const fetchData = useCallback(async (ignoreCache = false) => {
     if (!enabled) return;
+
+    // Check for demo mode
+    const demoMode = typeof window !== "undefined" ? localStorage.getItem("nexus_demo_mode") : null;
+    setIsDemoMode(demoMode === "true");
 
     // Check cache
     if (!ignoreCache && cache.has(path)) {
@@ -128,14 +135,25 @@ export function useApi<T>(path: string, options: UseApiOptions<T> = {}) {
     } catch (err: any) {
       if (currentFetch === fetchRef.current) {
         setError(err as ApiError);
-        setData(fallback ?? null);
+        // Only use fallback if explicitly provided and not in demo mode
+        if (fallback && !demoMode) {
+          setData(fallback);
+        } else {
+          setData(null);
+        }
+        
+        // Keep this hook UI-agnostic; callers that need toast feedback should
+        // read `error` and render or notify from component scope.
+        if (showError && typeof window !== "undefined") {
+          console.warn("API Error:", err.message);
+        }
       }
     } finally {
       if (currentFetch === fetchRef.current) {
         setLoading(false);
       }
     }
-  }, [path, ttl, fallback, enabled, timeout]);
+  }, [path, ttl, fallback, enabled, timeout, showError]);
 
   useEffect(() => {
     fetchData();
@@ -158,5 +176,5 @@ export function useApi<T>(path: string, options: UseApiOptions<T> = {}) {
 
   const retry = useCallback(() => fetchData(true), [fetchData]);
 
-  return { data, loading, error, retry };
+  return { data, loading, error, retry, isDemoMode };
 }

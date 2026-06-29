@@ -461,10 +461,29 @@ def health_status(db: Session = Depends(get_db)):
     from app.connectors import ConnectorConfig  # type: ignore
     from app.pipeline import PipelineRun  # type: ignore
     from app.core.config import settings  # type: ignore
-    latest = db.query(AnalysisResult).order_by(AnalysisResult.created_at.desc()).first()
-    user_count = db.query(User).count()
-    connector_count = db.query(ConnectorConfig).count()
-    pipeline_count = db.query(PipelineRun).count()
+    
+    # Handle potentially missing tables gracefully
+    try:
+        latest = db.query(AnalysisResult).order_by(AnalysisResult.created_at.desc()).first()
+        last_analysis = latest.created_at.isoformat() if latest else None
+    except Exception:
+        last_analysis = None
+    
+    try:
+        user_count = db.query(User).count()
+    except Exception:
+        user_count = 0
+    
+    try:
+        connector_count = db.query(ConnectorConfig).count()
+    except Exception:
+        connector_count = 0
+    
+    try:
+        pipeline_count = db.query(PipelineRun).count()
+    except Exception:
+        pipeline_count = 0
+    
     return {
         "status": "healthy",
         "platform": "NEXUS",
@@ -474,7 +493,7 @@ def health_status(db: Session = Depends(get_db)):
             "causal_genome": "active", "connectors": "active",
         },
         "stats": {"users": user_count, "connectors": connector_count, "pipeline_runs": pipeline_count},
-        "last_analysis": latest.created_at.isoformat() if latest else None,
+        "last_analysis": last_analysis,
     }
 
 

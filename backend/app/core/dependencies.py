@@ -101,6 +101,11 @@ async def require_auth(authorization: Optional[str] = Header(None)) -> dict:
     return payload
 
 
+async def get_current_user(user: dict = Depends(require_auth)) -> dict:
+    """Compatibility alias for routers that use the older dependency name."""
+    return user
+
+
 async def require_admin(user: dict = Depends(require_auth)) -> dict:
     """Require admin role for sensitive operations."""
     if user.get("role") != "admin":
