@@ -2,6 +2,9 @@
 
 # dependencies
 /node_modules
+node_modules/
+/.venv/
+.venv/
 /.pnp
 .pnp.*
 .yarn/*
@@ -15,7 +18,11 @@
 
 # next.js
 /.next/
+**/.next/
 /out/
+**/out/
+.next/
+node_modules/.cache/
 
 # production
 /build
@@ -39,4 +46,38 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-node_modules
+
+# python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+**/__pycache__/
+**/*.py[cod]
+
+# local runtime data
+data/*.db-shm
+data/*.db-wal
+data/*.db
+test_output.txt
+
+# test files and debug scripts
+test_*.py
+debug_*.py
+pytest.ini
+conftest.py
+test_*.csv
+
+# temporary files
+tmp/
+*.log
+*.err
+
+# cache and build files
+frontend/.next/
+**/.next/
+.turbopack/
+
+# documentation drafts
+AWS_INTEGRATION_GUIDE.md
+BACKEND_AUDIT.md
+FRONTEND_AUDIT.md
