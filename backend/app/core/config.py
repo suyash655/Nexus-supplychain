@@ -65,7 +65,15 @@ class Settings:
     DATA_QUALITY_THRESHOLD: float = float(os.getenv("DATA_QUALITY_THRESHOLD", "0.85"))
 
     # ── Upload limits ──
-    MAX_UPLOAD_BYTES: int = int(os.getenv("MAX_UPLOAD_BYTES", str(50 * 1024 * 1024)))  # 50 MB
+    MAX_UPLOAD_BYTES: int = int(os.getenv("MAX_UPLOAD_BYTES", str(500 * 1024 * 1024)))  # 500 MB default
+
+    # ── Connector Types ──
+    CONNECTOR_TYPES = [
+        {"id": "csv", "name": "CSV / Excel", "icon": "file-spreadsheet", "description": "Upload or connect to CSV/Excel files"},
+        {"id": "database", "name": "SQL Database", "icon": "database", "description": "PostgreSQL, MySQL, SQLite, etc."},
+        {"id": "s3", "name": "Cloud Storage", "icon": "cloud", "description": "AWS S3, Azure Blob, MinIO"},
+        {"id": "api", "name": "REST API", "icon": "globe", "description": "Connect to any REST endpoint or webhook"},
+    ]
 
     def validate(self) -> None:
         """

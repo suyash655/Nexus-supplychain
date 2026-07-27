@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Sidebar from "../components/Sidebar";
-import TopNav from "../components/TopNav";
-import { useToast } from "../components/ToastContext";
+import Sidebar from "../components/layout/Sidebar";
+import TopNav from "../components/layout/TopNav";
+import { useToast } from "../components/feedback/ToastContext";
 import { apiFetch } from "@/lib/api";
 import { Download, FileSpreadsheet, FileJson, Table } from "lucide-react";
 

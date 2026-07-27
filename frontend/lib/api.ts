@@ -24,11 +24,15 @@ export async function apiFetch(
   }
 
   const headers = new Headers(options.headers || {});
-  if (token && !headers.has("Authorization")) {
+  
+  // Skip auth for demo mode tokens
+  const isDemoToken = token?.startsWith("demo_");
+  if (token && !isDemoToken && !headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
   const res = await fetch(`${API_BASE}${path}`, {
+    cache: "no-store",
     ...options,
     headers,
   });

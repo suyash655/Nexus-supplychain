@@ -4,7 +4,13 @@ import json
 import numpy as np
 
 from app.main import SafeJSONResponse, app
+from contextlib import asynccontextmanager
 
+@asynccontextmanager
+async def mock_lifespan(app):
+    yield
+
+app.router.lifespan_context = mock_lifespan
 client = TestClient(app)
 
 def test_health_check():

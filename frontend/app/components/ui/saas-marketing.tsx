@@ -121,7 +121,7 @@ export const Navigation = React.memo(() => {
 
     return (
         <header style={navStyle}>
-            <nav style={{ maxWidth: 1200, margin: "0 auto", padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <nav style={{ maxWidth: 1200, margin: "0 auto", padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <Link href="/" style={{ fontSize: 22, fontWeight: 700, color: "var(--color-text-1, #F5F5F5)", textDecoration: "none", letterSpacing: "-0.03em" }}>
                     NEXUS<span style={{ color: "var(--color-accent, #E8FF47)" }}>.</span>
                 </Link>
@@ -205,14 +205,14 @@ Navigation.displayName = "Navigation";
 // ── Hero ──
 export const Hero = React.memo(() => {
     return (
-        <section style={{ position: "relative", minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "120px 24px 80px", background: "var(--color-bg, #0A0A0A)", overflow: "hidden" }}>
+        <section style={{ position: "relative", minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "100px 24px 60px", background: "var(--color-bg, #0A0A0A)", overflow: "hidden" }}>
             {/* Background glow */}
             <div style={{ position: "absolute", top: "20%", left: "50%", transform: "translateX(-50%)", width: 700, height: 700, borderRadius: "50%", background: "radial-gradient(circle, rgba(232,255,71,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
             <div style={{ position: "absolute", top: "40%", left: "30%", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle, rgba(99,102,241,0.06) 0%, transparent 70%)", pointerEvents: "none" }} />
 
             {/* 2-Column Layout */}
             <div style={{ maxWidth: 1200, margin: "0 auto", width: "100%", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 48, alignItems: "center", position: "relative", zIndex: 1 }}>
-                
+
                 {/* Left Column - Text Content */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
                     {/* Announcement badge */}
@@ -286,6 +286,20 @@ export const Hero = React.memo(() => {
                             <div style={{ marginLeft: 16, flex: 1, background: "var(--color-surface, #111111)", borderRadius: 6, padding: "5px 12px", fontSize: 12, color: "var(--color-text-3, #555555)" }}>
                                 nexus.app/dashboard
                             </div>
+                            {/* Illustrative label */}
+                            <div style={{ 
+                                padding: "4px 8px", 
+                                borderRadius: 4, 
+                                background: "rgba(232,255,71,0.1)", 
+                                border: "1px solid rgba(232,255,71,0.3)", 
+                                fontSize: 10, 
+                                color: "var(--color-accent, #E8FF47)", 
+                                fontWeight: 500,
+                                textTransform: "uppercase",
+                                letterSpacing: "0.05em"
+                            }}>
+                                Illustrative
+                            </div>
                         </div>
 
                         {/* Dashboard mock */}
@@ -348,10 +362,10 @@ export const HowItWorks = () => {
     ];
 
     return (
-        <section id="how-it-works" style={{ background: "var(--color-bg, #0A0A0A)", padding: "120px 24px", borderTop: "1px solid var(--color-border, #222222)" }}>
+        <section id="how-it-works" style={{ background: "var(--color-bg, #0A0A0A)", padding: "80px 24px", borderTop: "1px solid var(--color-border, #222222)" }}>
             <div style={{ maxWidth: 1200, margin: "0 auto" }}>
                 {/* Section Header */}
-                <div style={{ textAlign: "center", marginBottom: 80 }}>
+                <div style={{ textAlign: "center", marginBottom: 48 }}>
                     <div style={{ 
                         display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: 50, 
                         border: "1px solid var(--color-accent, #E8FF47)", background: "rgba(232,255,71,0.08)", marginBottom: 24 
@@ -462,10 +476,10 @@ export const FeaturesGrid = () => {
     ];
 
     return (
-        <section id="features" style={{ background: "var(--color-bg, #0A0A0A)", padding: "120px 24px", borderTop: "1px solid var(--color-border, #222222)" }}>
+        <section id="features" style={{ background: "var(--color-bg, #0A0A0A)", padding: "80px 24px", borderTop: "1px solid var(--color-border, #222222)" }}>
             <div style={{ maxWidth: 1200, margin: "0 auto" }}>
                 {/* Section Header */}
-                <div style={{ textAlign: "center", marginBottom: 80 }}>
+                <div style={{ textAlign: "center", marginBottom: 48 }}>
                     <div style={{ 
                         display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: 50, 
                         border: "1px solid var(--color-accent, #E8FF47)", background: "rgba(232,255,71,0.08)", marginBottom: 24 
@@ -616,10 +630,10 @@ export const Integrations = () => {
     ];
 
     return (
-        <section id="integrations" style={{ background: "var(--color-bg, #0A0A0A)", padding: "120px 24px", borderTop: "1px solid var(--color-border, #222222)" }}>
+        <section id="integrations" style={{ background: "var(--color-bg, #0A0A0A)", padding: "80px 24px", borderTop: "1px solid var(--color-border, #222222)" }}>
             <div style={{ maxWidth: 1200, margin: "0 auto" }}>
                 {/* Section Header */}
-                <div style={{ textAlign: "center", marginBottom: 64 }}>
+                <div style={{ textAlign: "center", marginBottom: 48 }}>
                     <div style={{ 
                         display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: 50, 
                         border: "1px solid var(--color-accent, #E8FF47)", background: "rgba(232,255,71,0.08)", marginBottom: 24 
@@ -762,10 +776,10 @@ export const Pricing = () => {
     };
 
     return (
-        <section id="pricing" style={{ background: "var(--color-bg, #0A0A0A)", padding: "120px 24px", borderTop: "1px solid var(--color-border, #222222)" }}>
+        <section id="pricing" style={{ background: "var(--color-bg, #0A0A0A)", padding: "80px 24px", borderTop: "1px solid var(--color-border, #222222)" }}>
             <div style={{ maxWidth: 1200, margin: "0 auto" }}>
                 {/* Section Header */}
-                <div style={{ textAlign: "center", marginBottom: 64 }}>
+                <div style={{ textAlign: "center", marginBottom: 48 }}>
                     <div style={{ 
                         display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: 50, 
                         border: "1px solid var(--color-accent, #E8FF47)", background: "rgba(232,255,71,0.08)", marginBottom: 24 
@@ -949,7 +963,7 @@ export const Pricing = () => {
 
 // ── Footer ──
 export const Footer = () => (
-    <footer style={{ background: "var(--color-bg, #0A0A0A)", borderTop: "1px solid var(--color-border, #222222)", padding: "80px 24px" }}>
+    <footer style={{ background: "var(--color-bg, #0A0A0A)", borderTop: "1px solid var(--color-border, #222222)", padding: "48px 24px" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 24 }}>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <span style={{ fontSize: 20, fontWeight: 700, color: "var(--color-text-1, #F5F5F5)", letterSpacing: "-0.02em" }}>

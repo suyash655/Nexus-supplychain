@@ -81,3 +81,15 @@ frontend/.next/
 AWS_INTEGRATION_GUIDE.md
 BACKEND_AUDIT.md
 FRONTEND_AUDIT.md
+
+# security — never commit these
+*.db
+*.db-shm
+*.db-wal
+nexus.db
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.json
+credentials.json

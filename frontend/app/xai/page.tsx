@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Sidebar from "../components/Sidebar";
-import TopNav from "../components/TopNav";
-import { SafeMarkdown } from "../components/SafeMarkdown";
-import { SynBarChart } from "../components/Charts";
+import Sidebar from "../components/layout/Sidebar";
+import TopNav from "../components/layout/TopNav";
+import { SafeMarkdown } from "../components/feedback/SafeMarkdown";
+import { SynBarChart } from "../components/charts/Charts";
 import { apiFetchJSON } from "@/lib/api";
-import { useToast } from "../components/ToastContext";
+import { useToast } from "../components/feedback/ToastContext";
 import { Brain, ArrowDownRight } from "lucide-react";
 
 export default function XAIPage() {

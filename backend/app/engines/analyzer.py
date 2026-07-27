@@ -277,9 +277,11 @@ class RiskScorer:
             else:
                 factors["cost_variance"] = 0.0
 
+            quality_data_available = False
             if "quality_score" in group.columns and group["quality_score"].notna().sum() > 0:
                 avg_quality = float(group["quality_score"].mean())
                 factors["quality_factor"] = max(0.0, 100.0 - avg_quality)
+                quality_data_available = True
             else:
                 factors["quality_factor"] = 30.0  # neutral default when missing
 
@@ -329,6 +331,7 @@ class RiskScorer:
                     round(min(100.0, risk_score + score_margin), 1),
                 ],
                 "low_data_warning": n < self._MIN_RELIABLE_N,
+                "quality_data_available": quality_data_available,
                 # Factor breakdown
                 "factors": {
                     **factors,

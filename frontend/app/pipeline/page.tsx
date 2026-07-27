@@ -1,14 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Sidebar from "../components/Sidebar";
-import TopNav from "../components/TopNav";
+import Sidebar from "../components/layout/Sidebar";
+import TopNav from "../components/layout/TopNav";
 import { AnimatedSection } from "../components/Animated";
 import {
   GitBranch, CheckCircle, XCircle, Clock, BarChart3, ArrowDown, ArrowUp, Shield,
 } from "lucide-react";
 import { apiFetchJSON, apiPostJSON } from "@/lib/api";
-import { useToast } from "../components/ToastContext";
+import { useToast } from "../components/feedback/ToastContext";
 
 type PipelineRun = {
   id: number; name: string; status: string;

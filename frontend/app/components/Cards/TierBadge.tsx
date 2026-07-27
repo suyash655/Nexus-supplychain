@@ -17,9 +17,9 @@ export function TierBadge({ tier }: TierBadgeProps) {
         }
       : t === "elevated"
       ? {
-          background: "rgba(245,158,11,0.08)",
-          color: "#F59E0B",
-          border: "1px solid rgba(245,158,11,0.18)",
+          background: "rgba(255,149,0,0.08)",
+          color: "#FF9500",
+          border: "1px solid rgba(255,149,0,0.18)",
         }
       : {
           background: "rgba(34,197,94,0.08)",

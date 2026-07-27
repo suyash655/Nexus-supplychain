@@ -48,122 +48,6 @@ class JobUpdateRequest(BaseModel):
 
 
 # ============================================================
-# XAI
-# ============================================================
-
-xai_router = APIRouter(prefix="/xai", tags=["XAI"])
-
-
-@xai_router.get("/feature-importance")
-def feature_importance(db: Session = Depends(get_db)):
-    """Get feature importance analysis."""
-    xai_res = get_analysis_result(db, "xai")
-    if xai_res:
-        return xai_res["importance"]
-    raise HTTPException(status_code=400, detail="No analysis available. Upload data first.")
-
-
-@xai_router.get("/counterfactuals")
-def counterfactuals(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100),
-    db: Session = Depends(get_db),
-):
-    """Get counterfactual explanations."""
-    xai_res = get_analysis_result(db, "xai")
-    data = xai_res["counterfactuals"] if xai_res else []
-    return {
-        "data": data[skip : skip + limit],
-        "total": len(data),
-        "skip": skip,
-        "limit": limit,
-    }
-
-
-# ============================================================
-# EXPORT
-# ============================================================
-
-export_router = APIRouter(prefix="/export", tags=["Export"])
-
-
-@export_router.get("/csv")
-def export_csv(db: Session = Depends(get_db)):
-    """Export data as CSV for Tableau."""
-    df = _load_dataframe()
-    if df.empty:
-        raise HTTPException(status_code=404, detail="No data to export")
-
-    ml_res = get_analysis_result(db, "ml", {})
-    risk_scores = ml_res.get("risk_scores", []) if ml_res else []
-    risk_map = {s["supplier"]: s["risk_score"] for s in risk_scores}
-    tier_map = {s["supplier"]: s["tier"] for s in risk_scores}
-
-    df["risk_score"] = df["supplier"].map(risk_map).fillna(0)
-    df["risk_tier"] = df["supplier"].map(tier_map).fillna("unknown")
-
-    output = io.StringIO()
-    df.to_csv(output, index=False)
-    output.seek(0)
-
-    return StreamingResponse(
-        iter([output.getvalue()]),
-        media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=synchain_export.csv"},
-    )
-
-
-@export_router.get("/json")
-def export_json(db: Session = Depends(get_db)):
-    """Export analysis results as JSON for Power BI."""
-    df = _load_dataframe()
-    if df.empty:
-        raise HTTPException(status_code=404, detail="No data to export")
-
-    ml_res = get_analysis_result(db, "ml", {})
-    risk_scores = ml_res.get("risk_scores", []) if ml_res else []
-    summary = ml_res.get("summary", {}) if ml_res else {}
-    anomalies = ml_res.get("anomalies", {}) if ml_res else {}
-
-    export_data = {
-        "metadata": {
-            "exported_at": datetime.now(timezone.utc).isoformat(),
-            "platform": "NEXUS 3.0",
-            "total_records": len(df),
-        },
-        "summary": summary,
-        "supplier_risk_scores": risk_scores,
-        "anomalies": anomalies.get("anomalies", [])[:100],
-        "raw_data": df.fillna("").to_dict(orient="records"),
-    }
-
-    output = json.dumps(export_data, indent=2, default=str)
-    return StreamingResponse(
-        iter([output]),
-        media_type="application/json",
-        headers={"Content-Disposition": "attachment; filename=synchain_powerbi.json"},
-    )
-
-
-@export_router.get("/tableau-schema")
-def tableau_schema():
-    """Get Tableau-compatible schema description."""
-    return {
-        "table_name": "SynChain Supply Intelligence",
-        "columns": [
-            {"name": "supplier", "type": "string", "role": "dimension"},
-            {"name": "sku", "type": "string", "role": "dimension"},
-            {"name": "warehouse", "type": "string", "role": "dimension"},
-            {"name": "region", "type": "string", "role": "dimension"},
-            {"name": "delay_days", "type": "integer", "role": "measure"},
-            {"name": "cost", "type": "float", "role": "measure"},
-            {"name": "quantity", "type": "integer", "role": "measure"},
-            {"name": "quality_score", "type": "float", "role": "measure"},
-            {"name": "risk_score", "type": "float", "role": "measure"},
-            {"name": "risk_tier", "type": "string", "role": "dimension"},
-        ],
-    }
-
 
 # ============================================================
 # CONNECTORS
@@ -174,14 +58,8 @@ connectors_router = APIRouter(prefix="/connectors", tags=["Connectors"])
 
 @connectors_router.get("/types")
 def list_connector_types():
-    return {
-        "types": [
-            {"id": "csv", "name": "CSV / Excel", "icon": "file-spreadsheet", "description": "Upload or connect to CSV/Excel files"},
-            {"id": "database", "name": "SQL Database", "icon": "database", "description": "PostgreSQL, MySQL, SQLite, etc."},
-            {"id": "s3", "name": "Cloud Storage", "icon": "cloud", "description": "AWS S3, Azure Blob, MinIO"},
-            {"id": "api", "name": "REST API", "icon": "globe", "description": "Connect to any REST endpoint or webhook"},
-        ]
-    }
+    from app.core.config import settings  # type: ignore
+    return {"types": settings.CONNECTOR_TYPES}
 
 
 @connectors_router.get("")
@@ -461,6 +339,7 @@ def health_status(db: Session = Depends(get_db)):
     from app.connectors import ConnectorConfig  # type: ignore
     from app.pipeline import PipelineRun  # type: ignore
     from app.core.config import settings  # type: ignore
+    from sqlalchemy import func  # type: ignore
     
     # Handle potentially missing tables gracefully
     try:
@@ -483,14 +362,38 @@ def health_status(db: Session = Depends(get_db)):
         pipeline_count = db.query(PipelineRun).count()
     except Exception:
         pipeline_count = 0
+
+    # Check if supply data rows exist — this is the ground truth for "has_real_data".
+    # We do NOT wait for AnalysisResult because ML analysis is async and can take
+    # minutes; the dashboard should show live DB data the moment ingestion completes.
+    try:
+        supply_row_count = db.query(func.count(SupplyData.id)).scalar() or 0
+    except Exception:
+        supply_row_count = 0
     
+    from app.core.orchestrator import is_analyzing as _is_analyzing  # type: ignore
+    analysis_running = _is_analyzing()
+    # has_real_data is true as soon as rows exist in supply_data OR analysis is saved
+    has_real_data = supply_row_count > 0 or latest is not None
+
+    from app.main import engines  # type: ignore
+
     return {
         "status": "healthy",
         "platform": "NEXUS",
         "version": settings.APP_VERSION,
+        "is_analyzing": analysis_running,
+        "has_real_data": has_real_data,
+        "supply_row_count": supply_row_count,
         "modules": {
-            "ml": "active", "graph": "active", "ai_copilot": "active",
-            "causal_genome": "active", "connectors": "active",
+            "ml": "active" if getattr(engines, "ml_analyzer", None) else "inactive",
+            "graph": "active" if getattr(engines, "graph_engine", None) else "inactive",
+            "xai": "active" if getattr(engines, "xai_engine", None) else "inactive",
+            "kpi": "active" if getattr(engines, "kpi_engine_instance", None) else "inactive",
+            "monte_carlo": "active" if getattr(engines, "monte_carlo_engine", None) else "inactive",
+            "ai_copilot": "active" if getattr(engines, "ai_copilot", None) else "inactive",
+            "causal_genome": "active" if getattr(engines, "causal_engine", None) else "inactive",
+            "connectors": "active",
         },
         "stats": {"users": user_count, "connectors": connector_count, "pipeline_runs": pipeline_count},
         "last_analysis": last_analysis,
@@ -498,8 +401,13 @@ def health_status(db: Session = Depends(get_db)):
 
 
 @system_router.delete("/reset")
-def reset_data(db: Session = Depends(get_db)):
-    """Clear all data and analysis cache."""
+def reset_data(
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    """Clear all data and analysis cache. Requires authentication."""
+    import logging as _logging
+    _log = _logging.getLogger("nexus.system")
     try:
         db.query(SupplyData).delete()
         db.query(UploadHistory).delete()
@@ -507,7 +415,13 @@ def reset_data(db: Session = Depends(get_db)):
         db.query(AnalysisResult).delete()
         db.query(SupplierProfile).delete()
         db.commit()
+        _log.warning(
+            "[NEXUS] All data reset by user=%s uid=%s",
+            user.get("sub", "unknown"),
+            user.get("uid", "unknown"),
+        )
     except Exception as e:
         db.rollback()
-        print(f"Reset error: {e}")
+        _log.error("[NEXUS] Reset failed: %s", e, exc_info=True)
+        raise
     return {"status": "reset_complete"}

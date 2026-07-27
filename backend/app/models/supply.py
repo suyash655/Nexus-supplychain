@@ -745,3 +745,63 @@ class IncidentSLA(Base):
     working_hours_only = Column(Integer, default=0)  # 1 if only business hours count
     created_at = Column(DateTime, default=_utcnow)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
+
+
+# ── Phase 1.2: Agentic mitigation loop tables ─────────────────────────────
+
+class PendingAction(Base):
+    """
+    An AI-proposed mitigation action awaiting human approval.
+
+    Lifecycle: awaiting_approval → approved | rejected → executed | failed
+    The frontend renders these as approval cards in the agents feed.
+    """
+    __tablename__ = "pending_actions"
+
+    id             = Column(Integer, primary_key=True, index=True)
+    run_id         = Column(String, index=True, nullable=False)   # agent run UUID
+    supplier       = Column(String, index=True, nullable=False)
+    sku            = Column(String, nullable=True)
+    trigger_score  = Column(Float, nullable=False)                # risk score that triggered the run
+    action_type    = Column(String, nullable=False)               # dual_source | reroute | safety_stock | alert
+    action_summary = Column(Text, nullable=False)                 # one-line human-readable summary
+    action_detail  = Column(JSON, nullable=True)                  # full structured payload from LLM
+    backup_suppliers = Column(JSON, nullable=True)                # [{name, risk_score, estimated_cost_delta}]
+    monte_carlo_summary = Column(JSON, nullable=True)             # {p50_delay_reduction, p90_cost_impact}
+    rag_context    = Column(JSON, nullable=True)                  # [{doc_name, excerpt, relevance_score}]
+    llm_reasoning  = Column(Text, nullable=True)                  # raw LLM reasoning chain
+    status         = Column(String, index=True, default="awaiting_approval")
+    approved_by    = Column(String, nullable=True)
+    approved_at    = Column(DateTime, nullable=True)
+    executed_at    = Column(DateTime, nullable=True)
+    execution_log  = Column(Text, nullable=True)
+    created_at     = Column(DateTime, default=_utcnow)
+
+
+# ── Graph failure simulation history ───────────────────────────────────────
+
+class ScenarioRun(Base):
+    """
+    Persists every graph failure simulation run.
+    Shown on the Risk Propagation page as a history of what-if analyses.
+    Created by POST /graph/simulate-failure.
+    """
+    __tablename__ = "scenario_runs"
+
+    id                   = Column(Integer, primary_key=True, index=True)
+    run_id               = Column(String, unique=True, index=True, nullable=False)
+    node_id              = Column(String, nullable=False)           # e.g. "supplier:Apex Materials"
+    node_name            = Column(String, nullable=False)
+    node_type            = Column(String, nullable=False)           # supplier | sku | warehouse | region
+    pre_betweenness      = Column(JSON, nullable=True)              # top-20 before removal
+    post_betweenness     = Column(JSON, nullable=True)              # top-20 after removal
+    pre_pagerank         = Column(JSON, nullable=True)
+    post_pagerank        = Column(JSON, nullable=True)
+    newly_critical_nodes = Column(JSON, nullable=True)              # nodes whose centrality jumped
+    unreachable_skus     = Column(JSON, nullable=True)              # SKUs with no remaining supplier
+    affected_regions     = Column(JSON, nullable=True)              # regions downstream of failed node
+    cascade_result       = Column(JSON, nullable=True)              # full cascade output
+    total_affected       = Column(Integer, default=0)
+    risk_assessment      = Column(String, default="contained")      # contained|significant|severe|catastrophic
+    created_by           = Column(String, default="system")
+    created_at           = Column(DateTime, default=_utcnow)

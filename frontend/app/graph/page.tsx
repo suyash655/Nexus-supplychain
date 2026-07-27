@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
-import Sidebar from "../components/Sidebar";
-import TopNav from "../components/TopNav";
+import Sidebar from "../components/layout/Sidebar";
+import TopNav from "../components/layout/TopNav";
 import { Network, AlertTriangle, Zap, GitBranch, ZoomIn, ZoomOut, Maximize2, Search, Filter } from "lucide-react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, apiPostJSON } from "@/lib/api";
 
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), { ssr: false });
 
@@ -54,6 +54,8 @@ export default function GraphPage() {
     const [cascadeInput, setCascadeInput] = useState("");
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [simulatingFailure, setSimulatingFailure] = useState(false);
+    const [simulatedFailureResult, setSimulatedFailureResult] = useState<any>(null);
     const [highlightNodes, setHighlightNodes] = useState<Set<string>>(new Set());
     const [selectedNode, setSelectedNode] = useState<ForceNode | null>(null);
     const [hoveredNode, setHoveredNode] = useState<ForceNode | null>(null);
@@ -110,7 +112,20 @@ export default function GraphPage() {
 
                 if (!gRes.ok) throw new Error(`Graph data fetch failed: ${gRes.status}`);
 
-                const rawGraph = await gRes.json();
+                let rawGraph = await gRes.json();
+                
+                // If real graph is empty, fetch fallback demo graph
+                if (!rawGraph || !rawGraph.nodes || rawGraph.nodes.length === 0) {
+                    try {
+                        const demoRes = await apiFetch(`/graph/demo`);
+                        if (demoRes.ok) {
+                            rawGraph = await demoRes.json();
+                        }
+                    } catch (e) {
+                        console.error("Failed to load demo graph", e);
+                    }
+                }
+
                 const summary = await gsRes.json();
                 const centralities = await cRes.json();
                 const paths = await cpRes.json();
@@ -180,6 +195,29 @@ export default function GraphPage() {
         }
     };
 
+    const simulateGraphFailure = async (nodeId: string) => {
+        setSimulatingFailure(true);
+        try {
+            const data: any = await apiPostJSON(`/graph/simulate-failure`, { node_id: nodeId });
+            if (data.error) {
+                console.error(data.error);
+                return;
+            }
+            setSimulatedFailureResult(data.diff);
+            
+            // Adjust highlighting for visual diff
+            const newHighlight = new Set<string>();
+            newHighlight.add(data.diff.node_id);
+            data.diff.newly_critical_nodes?.forEach((n: any) => newHighlight.add(n.node_id));
+            data.diff.cascade_result?.affected_details?.forEach((n: any) => newHighlight.add(n.node_id));
+            setHighlightNodes(newHighlight);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setSimulatingFailure(false);
+        }
+    };
+
     const getNodeSize = useCallback((node: ForceNode) => {
         const centralityScore = centralityMap[node.id] || 0;
         const baseSize = { supplier: 4, warehouse: 3, sku: 2, region: 3 }[node.type] || 2;
@@ -187,13 +225,18 @@ export default function GraphPage() {
     }, [centralityMap]);
 
     const getRiskColor = useCallback((node: ForceNode) => {
+        if (simulatedFailureResult) {
+            if (node.id === simulatedFailureResult.node_id) return "#475569"; // Grey out failed node
+            if (simulatedFailureResult.newly_critical_nodes?.some((n: any) => n.node_id === node.id)) return "#ef4444"; // Red for newly critical
+            if (simulatedFailureResult.cascade_result?.affected_details?.some((n: any) => n.node_id === node.id)) return "#f59e0b"; // Orange for cascade affected
+        }
         if (node.type !== "supplier") return NODE_COLORS[node.type] || NODE_COLORS.unknown;
         const delay = node.avg_delay || 0;
         if (delay > 10) return "#ef4444"; // red
         if (delay > 5) return "#f59e0b";  // yellow
         if (delay > 2) return "#facc15";  // gold
         return "#22c55e"; // green
-    }, []);
+    }, [simulatedFailureResult]);
 
     const renderNode = useCallback(
         (node: ForceNode, ctx: CanvasRenderingContext2D, globalScale: number) => {
@@ -420,7 +463,15 @@ export default function GraphPage() {
                                     {selectedNode.name}
                                     <span style={{ fontWeight: 400, color: "#64748b", fontSize: 12, marginLeft: 8 }}>{selectedNode.type}</span>
                                 </span>
-                                <button onClick={() => { setSelectedNode(null); setHighlightNodes(new Set()); }} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 18 }}>×</button>
+                                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                                    <button 
+                                        onClick={() => simulateGraphFailure(selectedNode.id)}
+                                        disabled={simulatingFailure}
+                                        style={{ background: "#ef4444", color: "#fff", border: "none", borderRadius: 6, padding: "6px 12px", fontSize: 12, fontWeight: 600, cursor: simulatingFailure ? "wait" : "pointer" }}>
+                                        {simulatingFailure ? "Simulating..." : "Simulate Failure"}
+                                    </button>
+                                    <button onClick={() => { setSelectedNode(null); setHighlightNodes(new Set()); }} style={{ background: "none", border: "none", color: "#64748b", cursor: "pointer", fontSize: 18 }}>×</button>
+                                </div>
                             </div>
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
                                 {Object.entries(selectedNode).filter(([k]) => !["id", "x", "y", "vx", "vy", "__indexColor", "__threeObj", "index", "fx", "fy"].includes(k)).map(([k, v]) => (
@@ -429,6 +480,52 @@ export default function GraphPage() {
                                         <div style={{ fontSize: 13, fontWeight: 600, marginTop: 2 }}>{typeof v === "number" ? v.toLocaleString() : String(v)}</div>
                                     </div>
                                 ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Simulation Result Panel */}
+                    {simulatedFailureResult && (
+                        <div className="card" style={{ marginBottom: 20, padding: 16, borderColor: "#ef444444", background: "rgba(239, 68, 68, 0.05)" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                                <span style={{ fontWeight: 600, fontSize: 15, color: "#ef4444", display: "flex", alignItems: "center", gap: 8 }}>
+                                    <AlertTriangle size={16} /> Failure Simulation: {simulatedFailureResult.node_name}
+                                </span>
+                                <button onClick={() => { setSimulatedFailureResult(null); setHighlightNodes(new Set()); }} style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: 18 }}>×</button>
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
+                                <div>
+                                    <div style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", fontWeight: 600, marginBottom: 8 }}>Newly Critical Nodes</div>
+                                    {simulatedFailureResult.newly_critical_nodes?.length > 0 ? (
+                                        simulatedFailureResult.newly_critical_nodes.map((n: any) => (
+                                            <div key={n.node_id} style={{ fontSize: 13, marginBottom: 4 }}>
+                                                <span style={{ color: "#ef4444", fontWeight: 500 }}>{n.name}</span> <span style={{ color: "#64748b", fontSize: 11 }}>({n.type})</span>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div style={{ fontSize: 12, color: "#94a3b8" }}>None</div>
+                                    )}
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", fontWeight: 600, marginBottom: 8 }}>Unreachable SKUs</div>
+                                    {simulatedFailureResult.unreachable_skus?.length > 0 ? (
+                                        simulatedFailureResult.unreachable_skus.map((n: any) => (
+                                            <div key={n.node_id} style={{ fontSize: 13, marginBottom: 4, color: "#f59e0b" }}>{n.name}</div>
+                                        ))
+                                    ) : (
+                                        <div style={{ fontSize: 12, color: "#94a3b8" }}>None</div>
+                                    )}
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: 11, color: "#64748b", textTransform: "uppercase", fontWeight: 600, marginBottom: 8 }}>Affected Regions</div>
+                                    {simulatedFailureResult.affected_regions?.length > 0 ? (
+                                        simulatedFailureResult.affected_regions.map((n: any) => (
+                                            <div key={n.node_id} style={{ fontSize: 13, marginBottom: 4, color: "#a78bfa" }}>{n.name}</div>
+                                        ))
+                                    ) : (
+                                        <div style={{ fontSize: 12, color: "#94a3b8" }}>None</div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}

@@ -458,7 +458,8 @@ class SupplyChainGraph:
             if node not in self.G.nodes:
                 continue
             data = self.G.nodes[node]
-            ttr_base = {"supplier": 14, "warehouse": 7, "sku": 5, "region": 3}.get(data.get("type"), 5)
+            hardcoded_ttr = {"supplier": 14, "warehouse": 7, "sku": 5, "region": 3}.get(data.get("type"), 5)
+            ttr_base = data.get("avg_delay") if data.get("avg_delay", 0) > 0 else hardcoded_ttr
             affected_details.append({
                 "node_id": node,
                 "name": data.get("name", node),
@@ -652,3 +653,100 @@ class SupplyChainGraph:
             })
 
         return critical_paths
+
+    def simulate_failure(self, node_id: str) -> Dict[str, Any]:
+        """Simulate the removal of a single node and calculate the differential impact."""
+        if not self._built:
+            return {"error": "Graph not built yet"}
+
+        # Resolve node
+        target_node = None
+        if node_id in self.G:
+            target_node = node_id
+        else:
+            matches = [n for n in self.G.nodes() if node_id.lower() in n.lower()]
+            if matches:
+                target_node = matches[0]
+
+        if not target_node:
+            return {"error": f"Node '{node_id}' not found"}
+
+        node_data = self.G.nodes[target_node]
+        node_name = node_data.get("name", target_node)
+        node_type = node_data.get("type", "unknown")
+
+        # 1. Pre-removal centrality
+        pre_centrality = self.get_centrality_scores()
+
+        # 2. Copy graph and remove node
+        g_copy = self.G.copy()
+        g_copy.remove_node(target_node)
+
+        # 3. Post-removal centrality using a temp engine
+        temp_engine = SupplyChainGraph()
+        temp_engine.G = g_copy
+        temp_engine._built = True
+        post_centrality = temp_engine.get_centrality_scores()
+
+        # 4. Find newly critical nodes (significant jump in PageRank or Betweenness)
+        pre_pr = {n["node_id"]: n.get("pagerank_score", 0) for n in pre_centrality["pagerank"]}
+        pre_bw = {n["node_id"]: n.get("betweenness_score", 0) for n in pre_centrality["betweenness"]}
+
+        newly_critical = []
+        for n in post_centrality["betweenness"]:
+            nid = n["node_id"]
+            old_score = pre_bw.get(nid, 0.0)
+            new_score = n.get("betweenness_score", 0.0)
+            if new_score > 0.01 and (old_score == 0 or new_score / old_score > 1.5):
+                newly_critical.append({
+                    "node_id": nid, "name": n["name"], "type": n["type"], 
+                    "metric": "betweenness", "old": old_score, "new": new_score
+                })
+        
+        for n in post_centrality["pagerank"]:
+            nid = n["node_id"]
+            if any(c["node_id"] == nid for c in newly_critical):
+                continue
+            old_score = pre_pr.get(nid, 0.0)
+            new_score = n.get("pagerank_score", 0.0)
+            if new_score > 0.05 and (old_score == 0 or new_score / old_score > 1.5):
+                newly_critical.append({
+                    "node_id": nid, "name": n["name"], "type": n["type"], 
+                    "metric": "pagerank", "old": old_score, "new": new_score
+                })
+
+        # 5. Unreachable SKUs
+        unreachable_skus = []
+        skus_pre = [n for n, d in self.G.nodes(data=True) if d.get("type") == "sku"]
+        
+        for sku in skus_pre:
+            if sku not in g_copy:
+                continue
+            in_edges = [u for u, v in g_copy.in_edges(sku) if g_copy.nodes[u].get("type") == "supplier"]
+            if not in_edges:
+                unreachable_skus.append({
+                    "node_id": sku, 
+                    "name": g_copy.nodes[sku].get("name", sku)
+                })
+
+        # 6. Cascade Simulation
+        cascade = self.simulate_cascade([target_node])
+
+        # 7. Affected Regions
+        affected_regions = [n for n in cascade.get("affected_details", []) if n.get("type") == "region"]
+
+        return {
+            "node_id": target_node,
+            "node_name": node_name,
+            "node_type": node_type,
+            "pre_betweenness": pre_centrality["betweenness"],
+            "post_betweenness": post_centrality["betweenness"],
+            "pre_pagerank": pre_centrality["pagerank"],
+            "post_pagerank": post_centrality["pagerank"],
+            "newly_critical_nodes": newly_critical,
+            "unreachable_skus": unreachable_skus,
+            "affected_regions": affected_regions,
+            "cascade_result": cascade,
+            "total_affected": cascade.get("total_affected", 0),
+            "risk_assessment": cascade.get("risk_assessment", "unknown"),
+        }

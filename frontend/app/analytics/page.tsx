@@ -2,18 +2,18 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useMemo, useEffect } from "react";
-import Sidebar from "../components/Sidebar";
-import TopNav from "../components/TopNav";
+import Sidebar from "../components/layout/Sidebar";
+import TopNav from "../components/layout/TopNav";
 import dynamic from "next/dynamic";
 import { useApi } from "../../hooks/useApi";
 import { KpiCard } from "../components/Cards/KpiCard";
 import { NoData } from "../components/Cards/NoData";
 import { Calendar, Filter, Download, RefreshCw, BarChart3, TrendingUp, AlertCircle } from "lucide-react";
 
-const SynBarChart = dynamic(() => import("../components/Charts").then((m) => ({ default: m.SynBarChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 300 }} /> });
-const SynLineChart = dynamic(() => import("../components/Charts").then((m) => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 300 }} /> });
-const SynPieChart = dynamic(() => import("../components/Charts").then((m) => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 300 }} /> });
-const SynAreaChart = dynamic(() => import("../components/Charts").then((m) => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 300 }} /> });
+const SynBarChart = dynamic(() => import("../components/charts/Charts").then((m) => ({ default: m.SynBarChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 300, minWidth: "100%" }} /> });
+const SynLineChart = dynamic(() => import("../components/charts/Charts").then((m) => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 300, minWidth: "100%" }} /> });
+const SynPieChart = dynamic(() => import("../components/charts/Charts").then((m) => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 300, minWidth: "100%" }} /> });
+const SynAreaChart = dynamic(() => import("../components/charts/Charts").then((m) => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 300, minWidth: "100%" }} /> });
 
 const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
 
@@ -70,6 +70,9 @@ export default function AnalyticsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Check if user has uploaded real data
+  const hasUploadedRealData = typeof window !== "undefined" ? localStorage.getItem("nexus_has_real_data") === "true" : false;
+
   const { data: summary, loading: l1, retry } = useApi<any>("/analytics/summary", { 
     fallback: DEMO_SUMMARY,
     // Add date range to API call when it changes
@@ -85,7 +88,7 @@ export default function AnalyticsPage() {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await retry();
-    setTimeout(() => setIsRefreshing(false), 1000);
+    setTimeout(() => setIsRefreshing(false), 500);
   };
 
   // Apply date range filter to API calls
@@ -100,7 +103,12 @@ export default function AnalyticsPage() {
   // Refresh data when date range changes
   useEffect(() => {
     if (dateRange !== "30d") {
-      retry();
+      const refreshData = async () => {
+        setIsRefreshing(true);
+        await retry();
+        setTimeout(() => setIsRefreshing(false), 500);
+      };
+      refreshData();
     }
   }, [dateRange, retry]);
 
@@ -137,10 +145,10 @@ export default function AnalyticsPage() {
           <main className="main-content">
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 24 }}>
               {[...Array(4)].map((_, i) => (
-                <div key={i} style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 6, padding: 20, height: 96 }} />
+                <div key={i} className="skeleton" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 6, padding: 20, height: 96, animation: "pulse 1.5s ease-in-out infinite" }} />
               ))}
             </div>
-            <div style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 6, height: 300 }} />
+            <div className="skeleton" style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 6, height: 300, animation: "pulse 1.5s ease-in-out infinite" }} />
           </main>
         </div>
       </div>
@@ -196,6 +204,7 @@ export default function AnalyticsPage() {
                   <button
                     key={range.value}
                     onClick={() => setDateRange(range.value)}
+                    className="topnav-btn"
                     style={{
                       padding: "4px 12px",
                       borderRadius: 4,
@@ -205,19 +214,7 @@ export default function AnalyticsPage() {
                       background: dateRange === range.value ? "var(--color-surface-2)" : "transparent",
                       color: dateRange === range.value ? "var(--color-text-1)" : "var(--color-text-3)",
                       cursor: "pointer",
-                      transition: "all 120ms ease",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (dateRange !== range.value) {
-                        e.currentTarget.style.background = "var(--color-surface-2)";
-                        e.currentTarget.style.color = "var(--color-text-1)";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (dateRange !== range.value) {
-                        e.currentTarget.style.background = "transparent";
-                        e.currentTarget.style.color = "var(--color-text-3)";
-                      }
+                      transition: "all 160ms ease",
                     }}
                   >
                     {range.label}
@@ -228,16 +225,15 @@ export default function AnalyticsPage() {
               {/* Filter Toggle */}
               <button
                 onClick={() => setShowFilters(!showFilters)}
+                className="topnav-btn"
                 style={{
                   display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px",
                   borderRadius: 4, fontSize: 13, fontWeight: 500, fontFamily: "var(--font-sans)",
                   background: showFilters ? "var(--color-surface-2)" : "transparent",
                   border: "1px solid var(--color-border-hi)",
                   color: "var(--color-text-1)", cursor: "pointer",
-                  transition: `background 120ms ${EASE}`,
+                  transition: `background 160ms ${EASE}`,
                 }}
-                onMouseEnter={e => (e.currentTarget.style.background = "var(--color-surface-2)")}
-                onMouseLeave={e => (e.currentTarget.style.background = showFilters ? "var(--color-surface-2)" : "transparent")}
               >
                 <Filter size={14} />
                 Filters
@@ -247,16 +243,15 @@ export default function AnalyticsPage() {
               <button
                 onClick={handleRefresh}
                 disabled={isRefreshing}
+                className="topnav-btn"
                 style={{
                   display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 12px",
                   borderRadius: 4, fontSize: 13, fontWeight: 500, fontFamily: "var(--font-sans)",
                   background: "transparent", border: "1px solid var(--color-border-hi)",
                   color: "var(--color-text-1)", cursor: isRefreshing ? "wait" : "pointer",
-                  transition: `background 120ms ${EASE}`,
+                  transition: `background 160ms ${EASE}`,
                   opacity: isRefreshing ? 0.5 : 1,
                 }}
-                onMouseEnter={e => !isRefreshing && (e.currentTarget.style.background = "var(--color-surface-2)")}
-                onMouseLeave={e => !isRefreshing && (e.currentTarget.style.background = "transparent")}
               >
                 <RefreshCw size={14} style={{ animation: isRefreshing ? "spin 1s linear infinite" : "none" }} />
                 Refresh
@@ -310,6 +305,27 @@ export default function AnalyticsPage() {
               </button>
             </div>
           </div>
+
+          {/* Backend connectivity notice */}
+          {hasUploadedRealData && (l1 || l2 || l3 || l4) && (
+            <div style={{
+              marginBottom: 24,
+              padding:      "10px 16px",
+              background:   "rgba(239, 68, 68, 0.08)",
+              border:       "1px solid rgba(239, 68, 68, 0.25)",
+              borderRadius: 6,
+              display:      "flex",
+              alignItems:   "center",
+              gap: 12,
+            }}>
+              <span style={{ fontSize: 13, fontWeight: 500, color: "#ef4444" }}>
+                Backend unavailable
+              </span>
+              <span style={{ fontSize: 13, color: "var(--color-text-2)" }}>
+                — Your data was uploaded but the backend is currently unreachable. Showing cached data where available.
+              </span>
+            </div>
+          )}
 
           {/* Filter Panel */}
           {showFilters && (
@@ -400,7 +416,7 @@ export default function AnalyticsPage() {
               {/* Delay by Supplier bar chart */}
               <ChartCard title="Average Delay by Supplier">
                 {delayDist.length > 0 ? (
-                  <SynBarChart data={delayDist} dataKey="avg_delay" nameKey="name" color="#F59E0B" height={260} />
+                  <SynBarChart data={delayDist} dataKey="avg_delay" nameKey="name" color="#FF9500" height={260} />
                 ) : (
                   <NoData height={200} msg="Insufficient data for this chart." actionText="Upload Dataset" actionHref="/upload" />
                 )}
@@ -409,7 +425,7 @@ export default function AnalyticsPage() {
               {/* Delay trend */}
               <ChartCard title="Delay Trend Over Time">
                 {timeSeries?.delay_trend?.length > 0 ? (
-                  <SynAreaChart data={timeSeries.delay_trend} dataKey="avg_delay" xKey="period" color="#F59E0B" height={220} />
+                  <SynAreaChart data={timeSeries.delay_trend} dataKey="avg_delay" xKey="period" color="#FF9500" height={220} />
                 ) : (
                   <NoData height={200} msg="Insufficient data for this chart." actionText="Upload Dataset" actionHref="/upload" />
                 )}
@@ -460,7 +476,7 @@ export default function AnalyticsPage() {
                             {info.dtype}
                           </td>
                           <td style={{ padding: "0 16px", height: 44, borderBottom: "1px solid var(--color-border)", verticalAlign: "middle" }}>
-                            <span style={{ fontWeight: 500, color: info.missing_pct > 10 ? "#FF4444" : info.missing_pct > 0 ? "#F59E0B" : "#22C55E" }}>
+                            <span style={{ fontWeight: 500, color: info.missing_pct > 10 ? "#FF4444" : info.missing_pct > 0 ? "#FF9500" : "#22C55E" }}>
                               {info.missing_pct}%
                             </span>
                           </td>
@@ -523,13 +539,13 @@ export default function AnalyticsPage() {
                         </td>
                         <td style={{ padding: "0 16px", height: 44, borderBottom: "1px solid var(--color-border)", verticalAlign: "middle" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                            <span style={{ fontWeight: 600, minWidth: 28, color: s.risk_score >= 70 ? "#FF4444" : s.risk_score >= 40 ? "#F59E0B" : "#22C55E" }}>
+                            <span style={{ fontWeight: 600, minWidth: 28, color: s.risk_score >= 70 ? "#FF4444" : s.risk_score >= 40 ? "#FF9500" : "#22C55E" }}>
                               {s.risk_score}
                             </span>
                             <div style={{ width: 64, height: 4, borderRadius: 999, background: "var(--color-surface-2)", overflow: "hidden" }}>
                               <div style={{
                                 width: `${s.risk_score}%`, height: "100%", borderRadius: 999,
-                                background: s.risk_score >= 70 ? "#FF4444" : s.risk_score >= 40 ? "#F59E0B" : "#22C55E",
+                                background: s.risk_score >= 70 ? "#FF4444" : s.risk_score >= 40 ? "#FF9500" : "#22C55E",
                               }} />
                             </div>
                           </div>
@@ -570,7 +586,7 @@ export default function AnalyticsPage() {
                     data={delayDist}
                     lines={[
                       { key: "risk_score", color: "#FF4444", name: "Risk Score" },
-                      { key: "avg_delay",  color: "#F59E0B", name: "Avg Delay"  },
+                      { key: "avg_delay",  color: "#FF9500", name: "Avg Delay"  },
                     ]}
                     xKey="name"
                     height={220}

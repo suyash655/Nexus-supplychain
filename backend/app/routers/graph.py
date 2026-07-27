@@ -15,7 +15,11 @@ router = APIRouter(prefix="/graph", tags=["Graph"])
 
 
 def _rebuild_graph(graph_res) -> SupplyChainGraph:
-    """Rebuild a SupplyChainGraph from cached visualization data."""
+    """
+    Rebuild a SupplyChainGraph from cached visualization data.
+    WARNING: This is a lossy round-trip. Internal metadata such as
+    `_cost_samples` is lost after serialization.
+    """
     g = SupplyChainGraph()
     nodes = graph_res.get("visualization", {}).get("nodes", [])
     edges = graph_res.get("visualization", {}).get("edges", [])
@@ -211,3 +215,90 @@ def compare_scenarios(
             raise HTTPException(status_code=400, detail="No supply chain data available.")
         mc.fit(df)
     return mc.compare_scenarios(scenarios, num_trials)
+
+
+# ── Scenario History (Failure Simulations) ──
+
+@router.post("/simulate-failure")
+def simulate_failure(
+    body: Dict[str, str],
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    """
+    Simulate failure of a specific node, returning a diff of network centrality 
+    and cascading effects. Stores the run in the database.
+    """
+    node_id = body.get("node_id")
+    if not node_id:
+        raise HTTPException(status_code=400, detail="node_id is required")
+
+    graph_res = get_analysis_result(db, "graph")
+    if not graph_res:
+        raise HTTPException(status_code=400, detail="No graph analysis available")
+
+    g = _rebuild_graph(graph_res)
+    result = g.simulate_failure(node_id)
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+
+    from app.models.supply import ScenarioRun
+    import uuid
+    run_id = str(uuid.uuid4())
+    run = ScenarioRun(
+        run_id=run_id,
+        node_id=result["node_id"],
+        node_name=result["node_name"],
+        node_type=result["node_type"],
+        pre_betweenness=result["pre_betweenness"],
+        post_betweenness=result["post_betweenness"],
+        pre_pagerank=result["pre_pagerank"],
+        post_pagerank=result["post_pagerank"],
+        newly_critical_nodes=result["newly_critical_nodes"],
+        unreachable_skus=result["unreachable_skus"],
+        affected_regions=result["affected_regions"],
+        cascade_result=result["cascade_result"],
+        total_affected=result["total_affected"],
+        risk_assessment=result["risk_assessment"],
+        created_by="system",
+    )
+    db.add(run)
+    db.commit()
+
+    return {"run_id": run_id, "diff": result}
+
+
+@router.get("/scenario-runs")
+def list_scenario_runs(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=100),
+    db: Session = Depends(get_db),
+    user: dict = Depends(require_auth),
+):
+    """Get a history of simulated failure scenarios."""
+    from app.models.supply import ScenarioRun
+    q = db.query(ScenarioRun).order_by(ScenarioRun.created_at.desc())
+    total = q.count()
+    runs = q.offset(skip).limit(limit).all()
+
+    return {
+        "total": total,
+        "runs": [
+            {
+                "id": r.id,
+                "run_id": r.run_id,
+                "node_id": r.node_id,
+                "node_name": r.node_name,
+                "node_type": r.node_type,
+                "total_affected": r.total_affected,
+                "risk_assessment": r.risk_assessment,
+                "newly_critical_nodes": r.newly_critical_nodes,
+                "unreachable_skus": r.unreachable_skus,
+                "affected_regions": r.affected_regions,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+                "created_by": r.created_by,
+            }
+            for r in runs
+        ]
+    }
+

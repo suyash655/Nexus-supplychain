@@ -4,7 +4,7 @@ NEXUS — Supply Chain Event Schemas
 Pydantic models for event ingestion and SSE streaming.
 """
 
-from pydantic import BaseModel, Field  # type: ignore
+from pydantic import BaseModel, Field, ConfigDict  # type: ignore
 from typing import Optional
 from datetime import datetime
 from uuid import UUID, uuid4
@@ -49,8 +49,7 @@ class SupplyChainEventResponse(BaseModel):
     tenant_id: str
     timestamp: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SSEEvent(BaseModel):

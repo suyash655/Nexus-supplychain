@@ -29,6 +29,11 @@ from slowapi import _rate_limit_exceeded_handler  # type: ignore
 from slowapi.errors import RateLimitExceeded  # type: ignore
 from dotenv import load_dotenv  # type: ignore
 import numpy as np  # type: ignore
+from fastapi.encoders import ENCODERS_BY_TYPE
+
+ENCODERS_BY_TYPE[np.integer] = int
+ENCODERS_BY_TYPE[np.floating] = float
+ENCODERS_BY_TYPE[np.ndarray] = lambda x: x.tolist()
 
 load_dotenv()
 
@@ -192,6 +197,7 @@ def _init_engine(name: str, factory):
 # Lifespan: startup + shutdown in one place
 # ============================================================
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
@@ -325,7 +331,7 @@ app.add_middleware(
 app.add_middleware(AuditMiddleware)
 
 # ── Rate-limit error handler (slowapi) ──
-app.state.limiter = __import__("app.routers.auth_routes", fromlist=["limiter"]).limiter
+app.state.limiter = __import__("app.features.auth.router", fromlist=["limiter"]).limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ── Request Logging Middleware ──
@@ -363,6 +369,9 @@ async def request_logging_middleware(request: Request, call_next):
         )
         
     response.headers["X-Request-ID"] = request_id
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
     return response
 
 
@@ -377,26 +386,27 @@ from app.core.orchestrator import set_engine_kwargs  # type: ignore
 # Register Routers
 # ============================================================
 
-from app.routers.upload import router as upload_router  # type: ignore
-from app.routers.analytics import router as analytics_router  # type: ignore
+from app.features.upload.router import router as upload_router  # type: ignore
+from app.features.analytics.router import router as analytics_router  # type: ignore
 from app.routers.ml import router as ml_router  # type: ignore
 from app.routers.graph import router as graph_router  # type: ignore
 from app.routers.copilot import router as copilot_router  # type: ignore
-from app.routers.auth_routes import router as auth_router  # type: ignore
+from app.features.auth.router import router as auth_router  # type: ignore
+from app.features.mitigation.router import router as mitigation_router  # type: ignore
 from app.routers.events import router as events_router  # type: ignore
 from app.routers.health import router as health_router  # type: ignore
-from app.routers.rag import router as rag_router  # type: ignore
+# from app.routers.rag import router as rag_router  # type: ignore
 from app.routers.suppliers import router as suppliers_router  # type: ignore
 from app.routers.analysis import router as analysis_router  # type: ignore
 from app.routers.remaining import (  # type: ignore
-    xai_router,
-    export_router,
     connectors_router,
     pipeline_router,
     causal_router,
     scheduler_router,
     system_router,
 )
+from app.features.xai.router import xai_router  # type: ignore
+from app.features.export.router import export_router  # type: ignore
 from app.routers.sop import router as sop_router  # type: ignore
 from app.routers.response_planning import router as response_planning_router  # type: ignore
 from app.routers.graphql import router as graphql_router  # type: ignore
@@ -407,7 +417,7 @@ from app.routers.batch_operations import router as batch_operations_router  # ty
 from app.routers.export_reporting import router as export_reporting_router  # type: ignore
 from app.routers.monitoring import router as monitoring_router  # type: ignore
 from app.routers.control_tower import router as control_tower_router  # type: ignore
-from app.routers.inventory_optimization import router as inventory_optimization_router  # type: ignore
+from app.features.planning.inventory.router import router as inventory_optimization_router  # type: ignore
 from app.routers.analytics_reporting import router as analytics_reporting_router  # type: ignore
 from app.routers.connectors import router as enterprise_connectors_router  # type: ignore
 from app.routers.ibp_orchestrator import router as ibp_orchestrator_router  # type: ignore
@@ -418,9 +428,10 @@ app.include_router(ml_router)
 app.include_router(graph_router)
 app.include_router(copilot_router)
 app.include_router(auth_router)
+app.include_router(mitigation_router)
 app.include_router(events_router)
 app.include_router(health_router)
-app.include_router(rag_router)
+# app.include_router(rag_router)
 app.include_router(suppliers_router)
 app.include_router(analysis_router)
 app.include_router(enterprise_connectors_router)

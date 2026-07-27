@@ -1,7 +1,7 @@
-import "./globals.css";
+import "../styles/globals.css";
 import type { Metadata } from "next";
 import { ReactNode } from "react";
-import { ToastProvider } from "./components/ToastContext";
+import { ToastProvider } from "./components/feedback/ToastContext";
 
 export const metadata: Metadata = {
   title: "NEXUS — Autonomous Data Intelligence Platform",

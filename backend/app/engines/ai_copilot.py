@@ -11,8 +11,11 @@ import re
 import httpx  # type: ignore
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timezone
+import logging
 
 from app.core.config import settings  # type: ignore
+
+logger = logging.getLogger("nexus.copilot")
 
 
 class AICopilot:
@@ -43,7 +46,7 @@ class AICopilot:
                 )
                 self.has_bedrock = True
             except Exception as e:
-                print(f"[NEXUS] Bedrock initialization failed: {e}")
+                logger.error("[NEXUS] Bedrock initialization failed: %s", e)
 
         # Determine active provider
         if self.groq_api_key and self.provider in ("groq", "auto"):
@@ -53,7 +56,15 @@ class AICopilot:
         else:
             self._active_provider = "offline"
 
-        print(f"[NEXUS] AI Copilot initialized — provider: {self._active_provider}")
+        # Log a clear, actionable warning if no LLM is configured
+        if self._active_provider == "offline":
+            logger.warning(
+                "[NEXUS] AI Copilot running in OFFLINE mode — no LLM available. "
+                "Set GROQ_API_KEY in backend/.env to enable AI responses. "
+                "Get a free key at https://console.groq.com"
+            )
+        else:
+            logger.info("[NEXUS] AI Copilot initialized — provider: %s", self._active_provider)
 
     @property
     def is_online(self) -> bool:
@@ -103,7 +114,7 @@ class AICopilot:
             data = response.json()
             return data["choices"][0]["message"]["content"]
         except Exception as e:
-            print(f"[NEXUS] Groq API call failed: {e}")
+            logger.error("[NEXUS] Groq API call failed: %s", e)
             # Fallback to bedrock if available
             if self.has_bedrock:
                 return self._call_bedrock(prompt, system_prompt)
@@ -129,7 +140,7 @@ class AICopilot:
             response_body = json.loads(response.get("body").read())
             return response_body.get("content", [{}])[0].get("text", "")
         except Exception as e:
-            print(f"[NEXUS] Bedrock call failed: {e}")
+            logger.error("[NEXUS] Bedrock call failed: %s", e)
             return ""
 
     def generate_executive_summary(
@@ -174,7 +185,7 @@ class AICopilot:
             risk_level, risk_color = "STABLE", "#22c55e"
 
         # Extract structured recommendations
-        recommendations = self._extract_recommendations(narrative)
+        recommendations = self._extract_recommendations(narrative, risk_scores)
 
         return {
             "overall_risk_level": risk_level,
@@ -213,12 +224,30 @@ class AICopilot:
 
         return "".join(parts)
 
-    def _extract_recommendations(self, narrative: str) -> List[Dict]:
+    def _extract_recommendations(self, narrative: str, risk_scores: Optional[List[Dict[str, Any]]] = None) -> List[Dict]:
         """Try to extract recommendations from LLM output, fall back to defaults."""
-        defaults = [
-            {"priority": "high", "action": "Review Critical Suppliers", "detail": "Focus on top-risk suppliers with elevated delay patterns.", "estimated_impact": "+10% Resilience"},
-            {"priority": "medium", "action": "Diversify Supply Base", "detail": "Reduce single-supplier dependencies for critical SKUs.", "estimated_impact": "-15% Risk Exposure"},
-        ]
+        defaults = []
+        if risk_scores and len(risk_scores) > 0:
+            top_risk = risk_scores[0]
+            defaults.append({
+                "priority": "high", 
+                "action": f"Review {top_risk.get('supplier', 'Top Supplier')}", 
+                "detail": f"Address elevated risk score of {top_risk.get('risk_score', 'unknown')}.", 
+                "estimated_impact": "+10% Resilience"
+            })
+            if len(risk_scores) > 1:
+                second_risk = risk_scores[1]
+                defaults.append({
+                    "priority": "medium", 
+                    "action": f"Diversify {second_risk.get('supplier', 'Supplier')}", 
+                    "detail": "Reduce dependency to mitigate ripple effects.", 
+                    "estimated_impact": "-15% Risk Exposure"
+                })
+        if not defaults:
+            defaults = [
+                {"priority": "high", "action": "Review Critical Suppliers", "detail": "Focus on top-risk suppliers with elevated delay patterns.", "estimated_impact": "+10% Resilience"},
+                {"priority": "medium", "action": "Diversify Supply Base", "detail": "Reduce single-supplier dependencies for critical SKUs.", "estimated_impact": "-15% Risk Exposure"},
+            ]
         try:
             json_match = re.search(r"\[.*\]", narrative, re.DOTALL)
             if json_match:
@@ -255,7 +284,7 @@ class AICopilot:
         return {
             "question": question,
             "answer": answer,
-            "confidence": 0.92 if self.is_online else 0.3,
+            "confidence": None,  # TODO: Implement dynamic confidence scoring based on retrieval quality
             "sources": [self._active_provider, "NEXUS Analytics"],
             "provider": self._active_provider,
         }
@@ -281,7 +310,7 @@ class AICopilot:
             "scenario": scenario,
             "impact_analysis": analysis,
             "recommendation": "See analysis for specific mitigation steps.",
-            "confidence_score": 0.88 if self.is_online else 0.3,
+            "confidence_score": None,  # TODO: Implement dynamic confidence scoring based on retrieval quality
             "provider": self._active_provider,
         }
 

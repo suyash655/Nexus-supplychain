@@ -11,8 +11,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Sidebar from "../../components/Sidebar";
-import TopNav from "../../components/TopNav";
+import Sidebar from "../../components/layout/Sidebar";
+import TopNav from "../../components/layout/TopNav";
 import { CheckCircle2, AlertCircle, ArrowRight, Columns } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 

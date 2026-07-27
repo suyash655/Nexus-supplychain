@@ -15,3 +15,4 @@ from app.models.analytics import (
     Report, ReportSchedule, ReportSubscription, ReportExecution, Dashboard,
     Widget, AnalyticsConfig, DataVisualization, AlertRule, ReportTemplate
 )
+from app.models.agent_actions import AgentAction, AgentTrace

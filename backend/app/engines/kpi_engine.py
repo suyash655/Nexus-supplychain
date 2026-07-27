@@ -61,20 +61,27 @@ class KPIEngine:
         if anomalies:
             anomaly_count = anomalies.get("anomaly_count", 0)
 
-        # Estimate: NEXUS detects anomalies within seconds of data ingestion
-        # vs. manual monitoring which takes hours/days
-        estimated_mttd_seconds = 15.0  # Platform average (upload → detection)
-        manual_benchmark_hours = 48.0  # Industry average for manual detection
+        from app.core.database import SessionLocal
+        from app.models.supply import AgentTrace
+        db = SessionLocal()
+        try:
+            traces = db.query(AgentTrace).limit(100).all()
+            if traces:
+                avg_ms = sum(t.duration_ms or 0 for t in traces) / len(traces)
+                mttd_seconds = round(avg_ms / 1000, 1)
+            else:
+                mttd_seconds = None
+        finally:
+            db.close()
 
         return {
             "name": "Mean Time to Disruption Detection",
             "abbreviation": "MTTD",
-            "value": estimated_mttd_seconds,
+            "value": mttd_seconds,
             "unit": "seconds",
-            "benchmark": f"{manual_benchmark_hours}h (manual monitoring)",
-            "improvement": f"{round(manual_benchmark_hours * 3600 / max(estimated_mttd_seconds, 1), 0)}x faster",
+            "status": "measured" if mttd_seconds else "needs_data",
+            "note": "Computed from agent trace logs" if mttd_seconds else "No agent traces yet — trigger an analysis to populate",
             "anomalies_detected": anomaly_count,
-            "trend": "stable",
             "category": "speed",
         }
 
@@ -108,33 +115,31 @@ class KPIEngine:
         Recommendation Acceptance Rate.
         What % of agent-generated sourcing alternatives are accepted.
         """
-        # In absence of user interaction logs, estimate based on data coverage
-        total_recommendations = 0
-        accepted = 0
+        from app.core.database import SessionLocal
+        from app.models.supply import PendingAction
+        db = SessionLocal()
+        try:
+            total = db.query(PendingAction).filter(
+                PendingAction.status.in_(["executed", "rejected"])
+            ).count()
+            accepted = db.query(PendingAction).filter(
+                PendingAction.status == "executed"
+            ).count()
+        finally:
+            db.close()
 
-        if analysis_history:
-            for h in analysis_history:
-                recs = h.get("recommendations_generated", 0)
-                acc = h.get("recommendations_accepted", 0)
-                total_recommendations += recs
-                accepted += acc
-
-        if total_recommendations > 0:
-            rate = round(accepted / total_recommendations * 100, 1)
-        else:
-            rate = 0.0  # No recommendations tracked yet
+        rate = round(accepted / total * 100, 1) if total > 0 else 0.0
 
         return {
             "name": "Recommendation Acceptance Rate",
             "abbreviation": "RAR",
             "value": rate,
             "unit": "%",
-            "total_recommendations": total_recommendations,
+            "total_recommendations": total,
             "accepted": accepted,
             "target": "> 60%",
-            "status": "on_target" if rate >= 60 else "needs_data" if total_recommendations == 0 else "needs_improvement",
+            "status": "on_target" if rate >= 60 else "needs_data" if total == 0 else "needs_improvement",
             "category": "quality",
-            "note": "Begins tracking after users interact with remediation suggestions" if total_recommendations == 0 else None,
         }
 
     def _compute_fpr(self, risk_scores: Optional[List[Dict]] = None, df: Optional[pd.DataFrame] = None) -> Dict[str, Any]:

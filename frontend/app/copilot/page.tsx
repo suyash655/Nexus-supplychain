@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import Sidebar from "../components/Sidebar";
-import TopNav from "../components/TopNav";
-import { SafeMarkdown } from "../components/SafeMarkdown";
-import { useToast } from "../components/ToastContext";
+import Sidebar from "../components/layout/Sidebar";
+import TopNav from "../components/layout/TopNav";
+import { SafeMarkdown } from "../components/feedback/SafeMarkdown";
+import { useToast } from "../components/feedback/ToastContext";
 import { apiFetch, apiPostJSON } from "@/lib/api";
 import { Bot, Send, Sparkles, Lightbulb, AlertTriangle } from "lucide-react";
 import { AIInputWithFile } from "../components/ui/ai-input-with-file";

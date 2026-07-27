@@ -2,11 +2,11 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import Sidebar from "../components/Sidebar";
-import TopNav from "../components/TopNav";
+import Sidebar from "../components/layout/Sidebar";
+import TopNav from "../components/layout/TopNav";
 
-import { SafeMarkdown } from "../components/SafeMarkdown";
-import { useToast } from "../components/ToastContext";
+import { SafeMarkdown } from "../components/feedback/SafeMarkdown";
+import { useToast } from "../components/feedback/ToastContext";
 import {
   DEMO_SUMMARY, DEMO_SUPPLIERS, DEMO_EXECUTIVE, DEMO_ANOMALIES,
   DEMO_TIME_SERIES, DEMO_RESILIENCE,
@@ -18,10 +18,10 @@ import { TierBadge } from "../components/Cards/TierBadge";
 import { SectionLabel } from "../components/Cards/SectionLabel";
 import { NoData } from "../components/Cards/NoData";
 
-const SynBarChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynBarChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
-const SynLineChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
-const SynPieChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
-const SynAreaChart = dynamic(() => import("../components/Charts").then(m => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260 }} /> });
+const SynBarChart = dynamic(() => import("../components/charts/Charts").then(m => ({ default: m.SynBarChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260, minWidth: "100%" }} /> });
+const SynLineChart = dynamic(() => import("../components/charts/Charts").then(m => ({ default: m.SynLineChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260, minWidth: "100%" }} /> });
+const SynPieChart = dynamic(() => import("../components/charts/Charts").then(m => ({ default: m.SynPieChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260, minWidth: "100%" }} /> });
+const SynAreaChart = dynamic(() => import("../components/charts/Charts").then(m => ({ default: m.SynAreaChart })), { ssr: false, loading: () => <div className="skeleton skeleton-chart" style={{ height: 260, minWidth: "100%" }} /> });
 
 const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
 
@@ -36,6 +36,7 @@ type Summary = {
   total_cost: number;
   delayed_shipments_pct: number;
   avg_quality: number;
+  is_demo_data: boolean;
 };
 
 type RiskSupplier = {
@@ -78,7 +79,7 @@ type AnomalyData = {
 function riskLevelColor(level: string): string {
   const l = level?.toUpperCase();
   if (l === "CRITICAL" || l === "HIGH") return "#FF4444";
-  if (l === "ELEVATED" || l === "MEDIUM") return "#F59E0B";
+  if (l === "ELEVATED" || l === "MEDIUM") return "#FF9500";
   return "#22C55E";
 }
 
@@ -89,12 +90,12 @@ export default function DashboardPage() {
   const { showToast } = useToast();
   const [navigating, setNavigating] = useState<string | null>(null);
 
-  const { data: summary, loading: l1 } = useApi<Summary | null>("/analytics/summary", { fallback: DEMO_SUMMARY });
-  const { data: suppliersResponse, loading: l2 } = useApi<{ data: RiskSupplier[]; total: number; skip: number; limit: number }>("/analytics/suppliers", { fallback: { data: DEMO_SUPPLIERS, total: DEMO_SUPPLIERS.length, skip: 0, limit: 50 } });
-  const { data: executive, loading: l3 } = useApi<ExecutiveSummary | null>("/copilot/summary", { fallback: DEMO_EXECUTIVE });
-  const { data: anomalies, loading: l4 } = useApi<AnomalyData | null>("/ml/anomalies", { fallback: DEMO_ANOMALIES });
-  const { data: timeSeries, loading: l5 } = useApi<any>("/analytics/time-series", { fallback: DEMO_TIME_SERIES });
-  const { data: resilience, loading: l6 } = useApi<any>("/graph/resilience", { fallback: DEMO_RESILIENCE });
+  const { data: summary, loading: l1, isDemoMode: isDemoSummary } = useApi<Summary | null>("/analytics/summary", { fallback: DEMO_SUMMARY });
+  const { data: suppliersResponse, loading: l2, isDemoMode: isDemoSuppliers } = useApi<{ data: RiskSupplier[]; total: number; skip: number; limit: number }>("/analytics/suppliers", { fallback: { data: DEMO_SUPPLIERS, total: DEMO_SUPPLIERS.length, skip: 0, limit: 50 } });
+  const { data: executive, loading: l3, isDemoMode: isDemoExecutive } = useApi<ExecutiveSummary | null>("/copilot/summary", { fallback: DEMO_EXECUTIVE });
+  const { data: anomalies, loading: l4, isDemoMode: isDemoAnomalies } = useApi<AnomalyData | null>("/ml/anomalies", { fallback: DEMO_ANOMALIES });
+  const { data: timeSeries, loading: l5, isDemoMode: isDemoTimeSeries } = useApi<any>("/analytics/time-series", { fallback: DEMO_TIME_SERIES });
+  const { data: resilience, loading: l6, isDemoMode: isDemoResilience } = useApi<any>("/graph/resilience", { fallback: DEMO_RESILIENCE });
 
   const handleNavigation = (path: string, buttonName: string) => {
     setNavigating(buttonName);
@@ -105,10 +106,35 @@ export default function DashboardPage() {
   };
 
   // Extract suppliers array from paginated response
-  const suppliers = suppliersResponse?.data || DEMO_SUPPLIERS;
+  const suppliers = suppliersResponse?.data || [];
 
   const loading = l1 || l2 || l3 || l4 || l5 || l6;
-  const isDemo = summary === DEMO_SUMMARY || suppliers === DEMO_SUPPLIERS;
+
+  // Real data = the summary has actual records from the DB (not demo defaults).
+  // Use the backend's is_demo_data flag as the authoritative signal.
+  const summaryHasRealData = summary && summary.is_demo_data === false;
+
+  // Suppliers have real data if they are non-empty and don't contain the demo sentinel supplier.
+  // NOTE: tier="unknown" is valid — it means DB data loaded before ML analysis completed.
+  const suppliersHasRealData = suppliers.length > 0;
+
+  const hasRealData = summaryHasRealData || suppliersHasRealData;
+
+  // Whether ML analysis has completed (risk scores available) or just DB data
+  const analysisComplete = suppliers.length > 0 &&
+    suppliers.some(s => s.tier !== "unknown");
+
+  // isDemo: only show demo banner if we truly have NO real data and ALL hooks are in demo mode
+  // Use isDemoMode flags as fallback for when the backend is completely unreachable
+  const isDemo = !hasRealData && (
+    isDemoSummary || isDemoSuppliers || isDemoExecutive || isDemoAnomalies || isDemoTimeSeries || isDemoResilience
+  );
+
+  // Check if user has uploaded real data (for error messaging when backend is down)
+  const hasUploadedRealData = typeof window !== "undefined" ? localStorage.getItem("nexus_has_real_data") === "true" : false;
+
+  // Calculate data freshness
+  const dataTimestamp = hasRealData ? new Date() : null;
 
   /* ── Derived data ── */
   const riskTiers = useMemo(() => ({
@@ -130,28 +156,8 @@ export default function DashboardPage() {
       risk_score: s.risk_score,
     })), [suppliers]);
 
-  const resilScore   = resilience?.network_resilience_score ?? 50;
-  const execRiskCol  = executive ? riskLevelColor(executive.overall_risk_level) : "#888888";
-
-  if (loading) {
-    return (
-      <div className="app-layout">
-        <Sidebar />
-        <div className="main-wrapper">
-          <TopNav />
-          <main className="main-content">
-            {/* Static skeleton — no shimmer per spec */}
-            <div className="kpi-grid">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 6, padding: 20, height: 96 }} />
-              ))}
-            </div>
-            <div style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 6, height: 300 }} />
-          </main>
-        </div>
-      </div>
-    );
-  }
+  const resilScore   = useMemo(() => resilience?.network_resilience_score ?? 50, [resilience]);
+  const execRiskCol  = useMemo(() => executive ? riskLevelColor(executive.overall_risk_level) : "#888888", [executive]);
 
   return (
     <div className="app-layout">
@@ -188,18 +194,20 @@ export default function DashboardPage() {
               >
                 {navigating === "analytics" ? "Loading..." : "Deep Analytics"}
               </button>
-              <button
-                className={`btn btn-primary ${navigating === "upload" ? "loading" : ""}`}
-                onClick={() => handleNavigation("/upload", "upload")}
-                disabled={navigating === "upload"}
-              >
-                {navigating === "upload" ? "Loading..." : "Upload Data"}
-              </button>
+              {!hasRealData && (
+                <button
+                  className={`btn btn-primary ${navigating === "upload" ? "loading" : ""}`}
+                  onClick={() => handleNavigation("/upload", "upload")}
+                  disabled={navigating === "upload"}
+                >
+                  {navigating === "upload" ? "Loading..." : "Upload Data"}
+                </button>
+              )}
             </div>
           </div>
 
           {/* Demo mode notice */}
-          {isDemo && (
+          {isDemo && !hasUploadedRealData && (
             <div style={{
               marginBottom: 24,
               padding:      "10px 16px",
@@ -208,23 +216,35 @@ export default function DashboardPage() {
               borderRadius: 6,
               display:      "flex",
               alignItems:   "center",
-              justifyContent: "space-between",
               gap: 12,
             }}>
-              <div>
-                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-1)" }}>
-                  Demo data
-                </span>
-                <span style={{ fontSize: 13, color: "var(--color-text-2)", marginLeft: 8 }}>
-                  — Backend offline or no data uploaded yet.
-                </span>
-              </div>
-              <button
-                className="btn btn-secondary btn-sm"
-                onClick={() => router.push("/upload")}
-              >
-                Upload Data
-              </button>
+              <span style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-1)" }}>
+                Demo data
+              </span>
+              <span style={{ fontSize: 13, color: "var(--color-text-2)" }}>
+                — Backend offline or no data uploaded yet.
+              </span>
+            </div>
+          )}
+
+          {/* Backend connectivity notice */}
+          {isDemo && hasUploadedRealData && (
+            <div style={{
+              marginBottom: 24,
+              padding:      "10px 16px",
+              background:   "rgba(239, 68, 68, 0.08)",
+              border:       "1px solid rgba(239, 68, 68, 0.25)",
+              borderRadius: 6,
+              display:      "flex",
+              alignItems:   "center",
+              gap: 12,
+            }}>
+              <span style={{ fontSize: 13, fontWeight: 500, color: "#ef4444" }}>
+                Backend unavailable
+              </span>
+              <span style={{ fontSize: 13, color: "var(--color-text-2)" }}>
+                — Your data was uploaded but the backend is currently unreachable. Showing cached data where available.
+              </span>
             </div>
           )}
 
@@ -236,13 +256,21 @@ export default function DashboardPage() {
               delta={`${summary?.unique_skus ?? 0} unique SKUs`}
               deltaDir="neutral"
               onClick={() => handleNavigation("/analytics", "analytics")}
+              loading={l1}
+              noData={!summary && !l1}
+              timestamp={dataTimestamp}
+              isLive={!isDemo && hasRealData}
             />
             <KpiCard
               label="Active Suppliers"
-              value={summary?.unique_suppliers ?? 0}
-              delta={riskTiers.critical > 0 ? `${riskTiers.critical} critical` : "All stable"}
+              value={hasRealData ? ((summary as any)?.unique_suppliers ?? suppliers.length) : (summary?.unique_suppliers ?? 0)}
+              delta={riskTiers.critical > 0 ? `${riskTiers.critical} critical` : analysisComplete ? "All stable" : hasRealData ? "Analysis running…" : "All stable"}
               deltaDir={riskTiers.critical > 0 ? "down" : "up"}
               onClick={() => handleNavigation("/graph", "graph")}
+              loading={l2}
+              noData={!hasRealData && !l2}
+              timestamp={dataTimestamp}
+              isLive={!isDemo && hasRealData}
             />
             <KpiCard
               label="Avg Delay"
@@ -253,6 +281,10 @@ export default function DashboardPage() {
                 (summary?.avg_delay_days ?? 0) > 2 ? "neutral" : "up"
               }
               onClick={() => handleNavigation("/analytics", "analytics")}
+              loading={l1}
+              noData={!summary && !l1}
+              timestamp={dataTimestamp}
+              isLive={!isDemo && hasRealData}
             />
             <KpiCard
               label="Anomalies Detected"
@@ -260,6 +292,10 @@ export default function DashboardPage() {
               delta={anomalies?.methods_used?.join(", ") ?? "—"}
               deltaDir={anomalies?.anomaly_count ?? 0 > 0 ? "down" : "up"}
               onClick={() => handleNavigation("/analytics", "analytics")}
+              loading={l4}
+              noData={!anomalies && !l4}
+              timestamp={dataTimestamp}
+              isLive={!isDemo && hasRealData}
             />
           </div>
 
@@ -311,6 +347,19 @@ export default function DashboardPage() {
                       </tr>
                     </thead>
                     <tbody>
+                      {!analysisComplete && suppliers.length > 0 && (
+                        <tr>
+                          <td colSpan={6} style={{
+                            padding: "10px 16px",
+                            fontSize: 12,
+                            color: "var(--color-text-3)",
+                            background: "rgba(232,255,71,0.03)",
+                            borderBottom: "1px solid var(--color-border)",
+                          }}>
+                            ⏳ ML analysis in progress — risk scores will populate shortly. Showing live supplier data.
+                          </td>
+                        </tr>
+                      )}
                       {suppliers.slice(0, 10).map((s, i) => (
                         <tr
                           key={i}
@@ -328,7 +377,7 @@ export default function DashboardPage() {
                               <div className="risk-bar-container">
                                 <div className="risk-bar-fill" style={{
                                   width: `${s.risk_score}%`,
-                                  background: s.risk_score >= 70 ? "#FF4444" : s.risk_score >= 40 ? "#F59E0B" : "#22C55E",
+                                  background: s.risk_score >= 70 ? "#FF4444" : s.risk_score >= 40 ? "#FF9500" : "#22C55E",
                                 }} />
                               </div>
                             </div>
@@ -349,6 +398,10 @@ export default function DashboardPage() {
                       ))}
                     </tbody>
                   </table>
+                ) : hasRealData && l2 ? (
+                  <div style={{ padding: 20, fontSize: 13, color: "var(--color-text-3)" }}>
+                    Loading supplier data…
+                  </div>
                 ) : (
                   <div style={{ padding: 20 }}>
                     <NoData msg="No suppliers found." actionText="Upload Supplier Data" actionHref="/upload" />
@@ -370,7 +423,7 @@ export default function DashboardPage() {
                       data={timeSeries.delay_trend}
                       dataKey="avg_delay"
                       xKey="period"
-                      color="#F59E0B"
+                      color="#FF9500"
                       height={180}
                     />
                   ) : (
@@ -448,7 +501,7 @@ export default function DashboardPage() {
                     }}>
                       <div style={{
                         fontSize: 11, fontWeight: 500,
-                        color: rec.priority === "HIGH" ? "#FF4444" : rec.priority === "MEDIUM" ? "#F59E0B" : "#22C55E",
+                        color: rec.priority === "HIGH" ? "#FF4444" : rec.priority === "MEDIUM" ? "#FF9500" : "#22C55E",
                         textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4,
                       }}>
                         {rec.priority} — {rec.action}
@@ -487,7 +540,7 @@ export default function DashboardPage() {
                       >
                         <span style={{
                           width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
-                          background: a.severity === "high" ? "#FF4444" : "#F59E0B",
+                          background: a.severity === "high" ? "#FF4444" : "#FF9500",
                         }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-1)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -499,7 +552,7 @@ export default function DashboardPage() {
                         </div>
                         <span style={{
                           fontSize: 11, fontWeight: 500, flexShrink: 0,
-                          color: a.severity === "high" ? "#FF4444" : "#F59E0B",
+                          color: a.severity === "high" ? "#FF4444" : "#FF9500",
                         }}>
                           {a.risk_score}
                         </span>
@@ -541,7 +594,7 @@ export default function DashboardPage() {
                   <div style={{ height: 4, borderRadius: 999, background: "var(--color-surface-2)", overflow: "hidden" }}>
                     <div style={{
                       width: `${resilScore}%`, height: "100%", borderRadius: 999,
-                      background: resilScore >= 70 ? "#22C55E" : resilScore >= 40 ? "#F59E0B" : "#FF4444",
+                      background: resilScore >= 70 ? "#22C55E" : resilScore >= 40 ? "#FF9500" : "#FF4444",
                       transition: "width 160ms cubic-bezier(0.16,1,0.3,1)",
                     }} />
                   </div>

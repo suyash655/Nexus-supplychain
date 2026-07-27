@@ -15,6 +15,7 @@ export const DEMO_SUMMARY = {
   delayed_shipments_pct: 34.2,
   median_delay: 3.0,
   avg_quality: 87.3,
+  is_demo_data: true,
 };
 
 export const DEMO_SUPPLIERS = [

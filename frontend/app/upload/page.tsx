@@ -2,10 +2,10 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Sidebar from "../components/Sidebar";
-import TopNav from "../components/TopNav";
+import Sidebar from "../components/layout/Sidebar";
+import TopNav from "../components/layout/TopNav";
 import { apiFetch } from "@/lib/api";
-import { invalidateApi } from "../../hooks/useApi";
+import { invalidateApi, forceRefreshApi, setReducedTtl } from "../../hooks/useApi";
 import { KpiCard } from "../components/Cards/KpiCard";
 
 const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
@@ -21,17 +21,69 @@ export default function UploadPage() {
   const [progress, setProgress] = useState(0);
   const [result, setResult]     = useState<any>(null);
   const [preview, setPreview]   = useState<any>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [missingColumns, setMissingColumns] = useState<string[]>([]);
+  const [error, setError]       = useState<string | null>(null);
+
+  const validateFile = (f: File): string | null => {
+    const validExtensions = ['.csv', '.xlsx', '.xls'];
+    const fileExtension = '.' + f.name.split('.').pop()?.toLowerCase();
+    
+    if (!validExtensions.includes(fileExtension)) {
+      return `Invalid file type: ${fileExtension}. Please upload .csv, .xlsx, or .xls files.`;
+    }
+    
+    if (f.size === 0) {
+      return 'File is empty. Please select a valid file.';
+    }
+    
+    if (f.size > 50 * 1024 * 1024) { // 50MB limit
+      return 'File is too large. Maximum size is 50MB.';
+    }
+    
+    return null;
+  };
+
+  const checkRequiredColumns = (previewData: any): string[] => {
+    const requiredColumns = ['supplier', 'product', 'cost', 'lead_time'];
+    const availableColumns = previewData.columns || [];
+    const missing = requiredColumns.filter(col => 
+      !availableColumns.some((avail: string) => 
+        avail.toLowerCase().includes(col.toLowerCase()) ||
+        avail.toLowerCase().includes(col.replace('_', ''))
+      )
+    );
+    return missing;
+  };
 
   const handleFile = async (f: File) => {
+    const error = validateFile(f);
+    if (error) {
+      setValidationError(error);
+      setFile(null);
+      setPreview(null);
+      setMissingColumns([]);
+      return;
+    }
+    
+    setValidationError(null);
     setFile(f);
     setResult(null);
     setPreview(null);
+    setMissingColumns([]);
 
     const formData = new FormData();
     formData.append("file", f);
     try {
       const res = await apiFetch("/upload/preview", { method: "POST", body: formData });
-      if (res.ok) setPreview(await res.json());
+      if (res.ok) {
+        const previewData = await res.json();
+        setPreview(previewData);
+        
+        // Check for required columns
+        const missing = checkRequiredColumns(previewData);
+        setMissingColumns(missing);
+      }
     } catch { /* preview is optional */ }
   };
 
@@ -43,16 +95,33 @@ export default function UploadPage() {
   }, []);
 
   const pollStatus = () => {
+    let pollCount = 0;
+    const MAX_POLLS = 60; // max 2 minutes of polling
     const interval = setInterval(async () => {
+      pollCount++;
       try {
         const res  = await apiFetch("/system/health");
         const data = await res.json();
-        if (!data.is_analyzing) {
+        // Stop polling when:
+        // - supply_row_count > 0 (data is in DB, dashboard can show live data), OR
+        // - has_real_data (analysis saved), OR
+        // - analysis finished AND we've polled at least once
+        const dataReady = (data.supply_row_count > 0) || data.has_real_data;
+        const analysisDone = !data.is_analyzing;
+        if (dataReady || (analysisDone && pollCount > 2) || pollCount >= MAX_POLLS) {
           clearInterval(interval);
           setAnalyzing(false);
+          // Force aggressive cache invalidation for all endpoints
           invalidateApi();
+          // Invalidate specific dashboard endpoints to ensure fresh data
+          invalidateApi("/analytics/kpi");
+          invalidateApi("/analytics/trends");
+          invalidateApi("/analytics/suppliers");
+          invalidateApi("/analytics/regions");
+          invalidateApi("/analytics/delays");
+          invalidateApi("/system/health");
           setProgress(100);
-          setTimeout(() => router.push("/dashboard"), 1200);
+          setTimeout(() => router.push("/dashboard"), 800);
         } else {
           setProgress(p => Math.min(p + 5, 94));
         }
@@ -62,6 +131,14 @@ export default function UploadPage() {
 
   const handleUpload = async () => {
     if (!file) return;
+
+    // Re-validate before upload
+    const error = validateFile(file);
+    if (error) {
+      setValidationError(error);
+      return;
+    }
+
     setLoading(true);
     setProgress(15);
 
@@ -84,12 +161,36 @@ export default function UploadPage() {
         setLoading(false);
         setAnalyzing(true);
         setProgress(40);
+
+        // Clear demo mode flag on successful upload
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("nexus_demo_mode");
+        }
+
+        // Force aggressive cache invalidation immediately after upload
+        invalidateApi();
+        // Mark analytics endpoints for reduced TTL to ensure fresh data
+        setReducedTtl();
+        // Invalidate specific dashboard endpoints to ensure fresh data
+        invalidateApi("/analytics/kpi");
+        invalidateApi("/analytics/trends");
+        invalidateApi("/analytics/suppliers");
+        invalidateApi("/analytics/regions");
+        invalidateApi("/analytics/delays");
+        invalidateApi("/system/health");
+
+        // Set a flag to indicate real data was uploaded
+        if (typeof window !== "undefined") {
+          localStorage.setItem("nexus_has_real_data", "true");
+        }
+
         pollStatus();
       } else {
         setResult({ status: "error", message: data.detail || "Upload failed." });
         setLoading(false);
       }
-    } catch {
+    } catch (err) {
+      console.error("Upload error:", err);
       setResult({ status: "error", message: "Upload failed. Check backend connectivity." });
       setLoading(false);
     }
@@ -211,6 +312,63 @@ export default function UploadPage() {
               </div>
             </label>
 
+            {/* Validation Error */}
+            {validationError && (
+              <div style={{
+                marginTop: 16,
+                padding: "12px 16px",
+                background: "rgba(239, 68, 68, 0.08)",
+                border: "1px solid rgba(239, 68, 68, 0.25)",
+                borderRadius: 6,
+                display: "flex",
+                gap: 12,
+                alignItems: "center",
+              }}>
+                <span style={{ fontSize: 13, color: "#ef4444" }}>
+                  {validationError}
+                </span>
+              </div>
+            )}
+
+            {/* Missing Columns Warning */}
+            {missingColumns.length > 0 && (
+              <div style={{
+                marginTop: 16,
+                padding: "12px 16px",
+                background: "rgba(245, 158, 11, 0.08)",
+                border: "1px solid rgba(245, 158, 11, 0.25)",
+                borderRadius: 6,
+                display: "flex",
+                flexDirection: "column",
+                gap: 8,
+              }}>
+                <div style={{ fontSize: 13, color: "#f59e0b", fontWeight: 500 }}>
+                  Missing required columns: {missingColumns.join(", ")}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--color-text-3)" }}>
+                  Your file may still work, but analysis quality may be reduced. Consider adding these columns for better results.
+                </div>
+              </div>
+            )}
+
+            {/* Error Notice */}
+            {error && (
+              <div style={{
+                marginTop: 16,
+                padding: "12px 16px",
+                background: "rgba(239, 68, 68, 0.08)",
+                border: "1px solid rgba(239, 68, 68, 0.25)",
+                borderRadius: 6,
+                display: "flex",
+                gap: 12,
+                alignItems: "center",
+              }}>
+                <span style={{ fontSize: 13, color: "#ef4444" }}>
+                  {error}
+                </span>
+              </div>
+            )}
+
             {/* Column preview */}
             {preview && (
               <div style={{
@@ -222,10 +380,10 @@ export default function UploadPage() {
                   display: "flex", alignItems: "center", justifyContent: "space-between",
                 }}>
                   <span style={{ fontSize: 11, fontWeight: 500, textTransform: "uppercase" as const, letterSpacing: "0.05em", color: "var(--color-text-2)" }}>
-                    Auto-Detected Column Mapping
+                    Pre-Commit Column Mapping Preview
                   </span>
                   <span style={{ fontSize: 11, color: "var(--color-text-3)" }}>
-                    {Object.keys(preview.auto_mapping ?? {}).length} columns mapped
+                    {Object.keys(preview.auto_mapping ?? {}).length} columns mapped · {preview.preview_rows?.length || 0} rows preview
                   </span>
                 </div>
 
@@ -348,24 +506,26 @@ export default function UploadPage() {
               <button
                 id="upload-submit-btn"
                 onClick={handleUpload}
+                disabled={!!validationError}
                 style={{
                   marginTop: 20,
                   width: "100%",
-                  background: "var(--color-accent)",
-                  color: "#0A0A0A",
-                  border: "none",
+                  background: validationError ? "var(--color-surface-2)" : "var(--color-accent)",
+                  color: validationError ? "var(--color-text-3)" : "#0A0A0A",
+                  border: missingColumns.length > 0 ? "1px solid #f59e0b" : "none",
                   borderRadius: 4,
                   padding: "10px 16px",
                   fontWeight: 600,
                   fontSize: 13,
                   fontFamily: "var(--font-sans)",
-                  cursor: "pointer",
+                  cursor: validationError ? "not-allowed" : "pointer",
                   transition: `opacity 120ms ${EASE}`,
+                  opacity: validationError ? 0.6 : 1,
                 }}
-                onMouseEnter={e => (e.currentTarget.style.opacity = "0.88")}
-                onMouseLeave={e => (e.currentTarget.style.opacity = "1")}
+                onMouseEnter={e => !validationError && (e.currentTarget.style.opacity = "0.88")}
+                onMouseLeave={e => !validationError && (e.currentTarget.style.opacity = "1")}
               >
-                Upload &amp; Analyze
+                {missingColumns.length > 0 ? "Upload with Missing Columns" : "Upload & Analyze"}
               </button>
             )}
 

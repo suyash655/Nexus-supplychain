@@ -41,8 +41,8 @@ export default function LoginPage() {
         errors.username = "Username is required";
       } else if (username.length < 3) {
         errors.username = "Username must be at least 3 characters";
-      } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
-        errors.username = "Username can only contain letters, numbers, and underscores";
+      } else if (!/^[a-zA-Z0-9_.-]+$/.test(username)) {
+        errors.username = "Username can only contain letters, numbers, dots, underscores, and hyphens";
       }
 
       if (!fullName) {
@@ -68,18 +68,16 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const formData = new FormData();
-      formData.append("email", email);
-      formData.append("password", password);
-
-      if (mode === "register") {
-        formData.append("username", username);
-        formData.append("full_name", fullName);
-      }
+      const body = {
+        email,
+        password,
+        ...(mode === "register" ? { username, full_name: fullName } : {}),
+      };
 
       const res = await fetch(`${API_BASE}/auth/${mode}`, {
         method: "POST",
-        body: formData,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       });
 
       const data = await res.json();

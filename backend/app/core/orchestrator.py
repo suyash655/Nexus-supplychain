@@ -254,6 +254,26 @@ def run_full_analysis(
             except Exception:
                 logger.exception("[NEXUS] ✗ KPI computation failed")
 
+        # ── 8. Agentic Mitigation Trigger ──
+        try:
+            from agent.mitigation_graph import trigger_mitigation, CRITICAL_THRESHOLD
+            for score_data in ml_res.get("risk_scores", []):
+                supplier = score_data.get("supplier")
+                score = score_data.get("risk_score", 0)
+                if score >= CRITICAL_THRESHOLD:
+                    # Pass the graph_res if it was created successfully, else None
+                    g_data = graph_res.get("visualization") if 'graph_res' in locals() else None
+                    trigger_mitigation(
+                        supplier=supplier,
+                        risk_score=score,
+                        risk_data=score_data,
+                        graph_data=g_data,
+                        sku=None
+                    )
+            logger.info("[NEXUS] ✓ Agentic mitigation triggers evaluated")
+        except Exception:
+            logger.exception("[NEXUS] ✗ Agentic mitigation trigger failed")
+
     except Exception:
         logger.exception("[NEXUS] ✗ Analysis pipeline fatal error")
     finally:

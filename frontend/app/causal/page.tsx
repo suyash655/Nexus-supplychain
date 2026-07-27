@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Sidebar from "../components/Sidebar";
-import TopNav from "../components/TopNav";
+import Sidebar from "../components/layout/Sidebar";
+import TopNav from "../components/layout/TopNav";
 import { AnimatedSection, StaggerGrid, StaggerItem } from "../components/Animated";
 import {
-  Dna, Zap, Target, Shield, ArrowRight, AlertTriangle, Search,
+  Dna, Zap, Target, Shield, ArrowRight, AlertTriangle, Search, History
 } from "lucide-react";
 import { apiFetchJSON, apiPostJSON } from "@/lib/api";
-import { useToast } from "../components/ToastContext";
+import { useToast } from "../components/feedback/ToastContext";
 
 type CausalChain = {
   node: string; name: string; type: string;
@@ -32,6 +32,22 @@ export default function CausalPage() {
   const [building, setBuilding] = useState(false);
   const [querying, setQuerying] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [scenarioRuns, setScenarioRuns] = useState<any[]>([]);
+  const [loadingRuns, setLoadingRuns] = useState(true);
+
+  useEffect(() => {
+    const fetchRuns = async () => {
+      try {
+        const res = await apiFetchJSON(`/graph/scenario-runs`);
+        setScenarioRuns((res as any).runs || []);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingRuns(false);
+      }
+    };
+    fetchRuns();
+  }, []);
 
   const buildGenome = async () => {
     setBuilding(true);
@@ -115,6 +131,59 @@ export default function CausalPage() {
             {error}
           </div>
         )}
+
+        {/* Scenario Run History */}
+        <div className="card" style={{ marginBottom: 28, border: "1px solid rgba(139, 92, 246, 0.15)", background: "rgba(139, 92, 246, 0.02)" }}>
+          <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <History size={20} color="#8b5cf6" />
+              <h2 style={{ fontSize: 16, fontWeight: 700 }}>Failure Scenario History</h2>
+              <span style={{ fontSize: 10, color: "#8b5cf6", background: "rgba(139,92,246,0.1)", padding: "2px 8px", borderRadius: 20 }}>WHAT-IF ANALYSIS</span>
+            </div>
+            <p style={{ fontSize: 13, color: "var(--text-secondary)", marginLeft: 20 }}>
+              Historical runs of graph failure simulations triggered from the Graph UI.
+            </p>
+          </div>
+
+          {loadingRuns ? (
+            <div style={{ fontSize: 13, color: "var(--text-muted)", padding: 20, textAlign: "center" }}>Loading scenario history...</div>
+          ) : scenarioRuns.length > 0 ? (
+            <div style={{ overflowX: "auto" }}>
+                <table className="data-table">
+                <thead>
+                    <tr>
+                    <th>Time</th>
+                    <th>Failed Node</th>
+                    <th>Total Affected</th>
+                    <th>Risk Level</th>
+                    <th>Newly Critical</th>
+                    <th>Unreachable SKUs</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {scenarioRuns.map(run => (
+                    <tr key={run.id}>
+                        <td style={{ color: "var(--text-muted)", fontSize: 12 }}>{new Date(run.created_at).toLocaleString()}</td>
+                        <td><span style={{ fontWeight: 500 }}>{run.node_name}</span> <span style={{ color: "var(--text-muted)", fontSize: 11 }}>({run.node_type})</span></td>
+                        <td>{run.total_affected}</td>
+                        <td>
+                        <span className={`risk-badge risk-${run.risk_assessment === 'catastrophic' ? 'critical' : run.risk_assessment === 'severe' ? 'elevated' : 'stable'}`}>
+                            {run.risk_assessment || "unknown"}
+                        </span>
+                        </td>
+                        <td>{run.newly_critical_nodes?.length || 0}</td>
+                        <td>{run.unreachable_skus?.length || 0}</td>
+                    </tr>
+                    ))}
+                </tbody>
+                </table>
+            </div>
+          ) : (
+            <div style={{ padding: 20, textAlign: "center", color: "var(--text-muted)", fontSize: 13, background: "rgba(0,0,0,0.2)", borderRadius: 8 }}>
+              No failure scenarios have been run yet. Go to the Graph view and click "Simulate Failure" on a node.
+            </div>
+          )}
+        </div>
 
         {/* Build Result Stats */}
         {buildResult && !buildResult.error && (

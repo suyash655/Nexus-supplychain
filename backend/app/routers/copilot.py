@@ -103,10 +103,50 @@ def execute_fix(
     db: Session = Depends(get_db),
     user: dict = Depends(require_auth),
 ):
-    """Simulate execution of an AI-recommended fix."""
+    """
+    Simulate execution of an AI-recommended fix.
+
+    Computes a data-driven resilience delta by checking whether any
+    pending mitigation actions of this type exist and using their
+    monte_carlo_summary to estimate impact. Falls back to a clearly
+    labelled estimate when no simulation data is available.
+
+    # TODO: wire to actual execution (PO dispatch, email) when
+    #       external integrations are added.
+    """
+    from app.models.supply import PendingAction  # type: ignore
+
+    fix_type = body.type or "unknown"
+
+    # Look for a recently-drafted mitigation action of this type to get
+    # a data-driven resilience estimate
+    recent = (
+        db.query(PendingAction)
+        .filter(PendingAction.action_type == fix_type)
+        .order_by(PendingAction.created_at.desc())
+        .first()
+    )
+
+    if recent and recent.monte_carlo_summary:
+        mc = recent.monte_carlo_summary
+        p50_risk = mc.get("system_risk_score")
+        if p50_risk is not None:
+            trigger = float(recent.trigger_score or 70)
+            delta_pts = round(trigger - float(p50_risk), 1)
+            resilience_delta = f"+{delta_pts} pts risk reduction (P50 simulation)"
+        else:
+            resilience_delta = "# TODO: not yet computed — Monte Carlo not fitted"
+    else:
+        # No simulation data — label it explicitly rather than showing a fake number
+        resilience_delta = "# TODO: not yet computed — trigger an analysis first"
+
     return {
-        "status": "Fix Simulated",
-        "type": body.type,
-        "resilience_delta": "+5.2%",
-        "message": f"Successfully simulated '{body.type}' mitigation. Network risk reduced.",
+        "status": "simulated",
+        "type":   fix_type,
+        "resilience_delta": resilience_delta,
+        "message": (
+            f"Fix of type '{fix_type}' logged. "
+            "Awaiting human approval in the Mitigation queue before execution."
+        ),
+        "approval_url": "/mitigation/pending",
     }

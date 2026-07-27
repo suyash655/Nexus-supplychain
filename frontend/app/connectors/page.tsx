@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Sidebar from "../components/Sidebar";
-import TopNav from "../components/TopNav";
+import Sidebar from "../components/layout/Sidebar";
+import TopNav from "../components/layout/TopNav";
 import { AnimatedSection, StaggerGrid, StaggerItem } from "../components/Animated";
-import { useToast } from "../components/ToastContext";
+import { useToast } from "../components/feedback/ToastContext";
 import { apiFetchJSON, apiPostJSON } from "@/lib/api";
 import {
   Database, Plug, Cloud, Globe, CheckCircle, XCircle, RefreshCw, Plus,
