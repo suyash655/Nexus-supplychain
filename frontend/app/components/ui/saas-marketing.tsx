@@ -218,7 +218,7 @@ export const Hero = React.memo(() => {
                     {/* Announcement badge */}
                     <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 16px", borderRadius: 50, border: "1px solid var(--color-border, #222222)", background: "var(--color-surface, #111111)", width: "fit-content" }}>
                         <span style={{ fontSize: 12, color: "var(--color-accent, #E8FF47)", fontWeight: 600 }}>NEW</span>
-                        <span style={{ fontSize: 12, color: "var(--color-text-2, #888888)" }}>AI-powered Causal Genome Engine</span>
+                        <span style={{ fontSize: 12, color: "var(--color-text-2, #888888)" }}>AI-assisted Risk Propagation Engine</span>
                         <ChevronRight size={14} style={{ color: "var(--color-text-2, #888888)" }} />
                     </div>
 

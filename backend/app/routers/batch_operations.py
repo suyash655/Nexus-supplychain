@@ -252,7 +252,8 @@ async def _process_data_export(job_id: str, parameters: Dict[str, Any]):
             "export_format": parameters.get("format", "csv"),
             "records_exported": 500,
             "file_size_bytes": 1024000,
-            "download_url": f"/api/export/downloads/{job_id}"
+            "download_url": None,
+            "message": "Batch export downloads are not a canonical API surface. Use /export/csv or /export/json for current exports."
         }
     })
 

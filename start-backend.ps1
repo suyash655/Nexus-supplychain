@@ -9,6 +9,7 @@ Write-Host "  Keep this window OPEN!" -ForegroundColor Red
 Write-Host "============================================" -ForegroundColor Cyan
 
 $env:PYTHONPATH = "$PSScriptRoot\backend"
+$env:DEBUG = "true"
 Set-Location "$PSScriptRoot\backend"
 
 & "$PSScriptRoot\.venv\Scripts\python.exe" -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload

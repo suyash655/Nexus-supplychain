@@ -15,9 +15,10 @@ xai_router = APIRouter(prefix="/xai", tags=["XAI"])
 def feature_importance(db: Session = Depends(get_db), user: dict = Depends(require_auth)):
     """Get feature importance analysis."""
     xai_res = get_analysis_result(db, "xai")
-    if xai_res:
+    if xai_res and xai_res.get("importance"):
         return xai_res["importance"]
-    raise HTTPException(status_code=400, detail="No analysis available. Upload data first.")
+    # Return empty structure instead of 400 — frontend shows "Upload data" state
+    return {"features": [], "interpretation": "", "model_score": None, "target": "delay_days"}
 
 @xai_router.get("/counterfactuals")
 def counterfactuals(

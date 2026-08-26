@@ -398,7 +398,8 @@ def node_write_pending_action(state: MitigationState) -> MitigationState:
 
     try:
         from app.core.database import SessionLocal  # type: ignore
-        from app.models.supply import PendingAction, AgentTrace  # type: ignore
+        from app.models.supply import PendingAction  # type: ignore
+        from app.models.agent_actions import AgentTrace  # type: ignore
 
         db = SessionLocal()
         try:

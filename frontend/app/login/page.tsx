@@ -255,7 +255,7 @@ export default function LoginPage() {
         {/* Footer */}
         <p style={{ textAlign: "center", fontSize: 11, color: "#475569", marginTop: 24, lineHeight: 1.6 }}>
           Enterprise-grade supply chain intelligence<br />
-          Powered by Causal Genome Engine™
+          Powered by Risk Propagation Engine
         </p>
 
         <button

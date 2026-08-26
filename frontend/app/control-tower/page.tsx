@@ -898,10 +898,10 @@ export default function ControlTowerPage() {
                       </div>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                         <span style={{ fontSize: 18, fontWeight: 600, color: "var(--color-text-1)" }}>
-                          {metric.current.toFixed(1)}%
+                          {(metric.current ?? 0).toFixed(1)}%
                         </span>
                         <span style={{ fontSize: 11, color: "var(--color-text-3)" }}>
-                          Target: {metric.target.toFixed(1)}%
+                          Target: {(metric.target ?? 0).toFixed(1)}%
                         </span>
                       </div>
                       <div style={{
@@ -913,8 +913,8 @@ export default function ControlTowerPage() {
                       }}>
                         <div style={{
                           height: "100%",
-                          width: `${(metric.current / metric.target) * 100}%`,
-                          background: metric.current >= metric.target ? "#10B981" : metric.current >= metric.target * 0.9 ? "#FF9500" : "#EF4444",
+                          width: `${Math.min(100, ((metric.current ?? 0) / (metric.target || 1)) * 100)}%`,
+                          background: (metric.current ?? 0) >= (metric.target ?? 0) ? "#10B981" : (metric.current ?? 0) >= (metric.target ?? 0) * 0.9 ? "#FF9500" : "#EF4444",
                           borderRadius: 2,
                           transition: "width 300ms ease"
                         }} />

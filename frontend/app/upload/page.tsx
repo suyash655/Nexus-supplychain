@@ -120,6 +120,12 @@ export default function UploadPage() {
           invalidateApi("/analytics/regions");
           invalidateApi("/analytics/delays");
           invalidateApi("/system/health");
+          // Invalidate graph endpoints so the network page reloads real data
+          invalidateApi("/graph/visualization");
+          invalidateApi("/graph/summary");
+          invalidateApi("/graph/centrality");
+          invalidateApi("/graph/critical-paths");
+          invalidateApi("/graph/status");
           setProgress(100);
           setTimeout(() => router.push("/dashboard"), 800);
         } else {
@@ -136,6 +142,21 @@ export default function UploadPage() {
     const error = validateFile(file);
     if (error) {
       setValidationError(error);
+      return;
+    }
+
+    // Quick connectivity check before attempting full upload
+    try {
+      const ping = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/`, {
+        method: "GET",
+        signal: AbortSignal.timeout(3000),
+      });
+      if (!ping.ok) throw new Error("Backend unhealthy");
+    } catch {
+      setResult({
+        status: "error",
+        message: "Cannot reach the backend server. Start it with: cd backend && ..\\venv\\Scripts\\uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload",
+      });
       return;
     }
 
@@ -178,6 +199,12 @@ export default function UploadPage() {
         invalidateApi("/analytics/regions");
         invalidateApi("/analytics/delays");
         invalidateApi("/system/health");
+        // Invalidate graph endpoints
+        invalidateApi("/graph/visualization");
+        invalidateApi("/graph/summary");
+        invalidateApi("/graph/centrality");
+        invalidateApi("/graph/critical-paths");
+        invalidateApi("/graph/status");
 
         // Set a flag to indicate real data was uploaded
         if (typeof window !== "undefined") {
@@ -191,7 +218,13 @@ export default function UploadPage() {
       }
     } catch (err) {
       console.error("Upload error:", err);
-      setResult({ status: "error", message: "Upload failed. Check backend connectivity." });
+      const isNetworkError = err instanceof TypeError && err.message === "Failed to fetch";
+      setResult({
+        status: "error",
+        message: isNetworkError
+          ? "Cannot reach the backend server. Make sure it is running on http://localhost:8000 — see README for startup instructions."
+          : "Upload failed. Check backend connectivity.",
+      });
       setLoading(false);
     }
   };

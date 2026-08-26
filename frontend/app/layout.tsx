@@ -6,7 +6,7 @@ import { ToastProvider } from "./components/feedback/ToastContext";
 export const metadata: Metadata = {
   title: "NEXUS — Autonomous Data Intelligence Platform",
   description:
-    "Enterprise-grade supply chain intelligence with Causal Genome, multi-source connectors, and AI autonomy.",
+    "Supply chain intelligence with risk propagation, multi-source connectors, and offline-safe AI workflows.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

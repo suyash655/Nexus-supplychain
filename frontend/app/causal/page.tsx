@@ -10,9 +10,9 @@ import {
 import { apiFetchJSON, apiPostJSON } from "@/lib/api";
 import { useToast } from "../components/feedback/ToastContext";
 
-type CausalChain = {
+type PropagationChain = {
   node: string; name: string; type: string;
-  causal_strength: number; mechanism: string;
+  propagation_strength?: number; causal_strength?: number; mechanism: string;
   causal_chain?: string;
   dependency_path?: string;
   estimated_dollar_impact: number;
@@ -58,7 +58,7 @@ export default function CausalPage() {
       const frag = await apiFetchJSON(`/causal/fragility`);
       setFragility(frag);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unable to build causal graph";
+      const message = err instanceof Error ? err.message : "Unable to build risk propagation graph";
       setError(message);
       showToast(message, "error");
     } finally {
@@ -103,7 +103,7 @@ export default function CausalPage() {
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <Dna size={28} color="#06b6d4" />
-              <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.02em" }}>Causal Supply Chain Genome</h1>
+              <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.02em" }}>Risk Propagation Graph</h1>
             </div>
             <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>
               Downstream risk propagation — simulate disruptions and trace dependency exposure
@@ -202,15 +202,15 @@ export default function CausalPage() {
           </div>
         )}
 
-        {/* Interventional Query — The X-Factor UI */}
+        {/* Risk propagation query */}
         <div className="card" style={{ marginBottom: 28, border: "1px solid rgba(6, 182, 212, 0.15)", background: "rgba(6, 182, 212, 0.02)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
             <Target size={20} color="#06b6d4" />
-            <h2 style={{ fontSize: 16, fontWeight: 700 }}>Interventional Query</h2>
+            <h2 style={{ fontSize: 16, fontWeight: 700 }}>Disruption Query</h2>
             <span style={{ fontSize: 10, color: "#06b6d4", background: "rgba(6,182,212,0.1)", padding: "2px 8px", borderRadius: 20 }}>RISK PROPAGATION</span>
           </div>
           <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 16 }}>
-            Ask: &quot;What would happen if we remove this supplier?&quot; — Get the full causal chain with dollar impact.
+            Ask: &quot;What would happen if we remove this supplier?&quot; and trace downstream exposure.
           </p>
 
           <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
@@ -259,10 +259,10 @@ export default function CausalPage() {
                 </div>
               </div>
 
-              {/* Causal Chains */}
-              <h3 style={{ fontSize: 13, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 10 }}>Causal Propagation Chains</h3>
+              {/* Propagation Chains */}
+              <h3 style={{ fontSize: 13, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 10 }}>Risk Propagation Chains</h3>
               <div style={{ display: "grid", gap: 8 }}>
-                {interventionResult.causal_chains?.slice(0, 8).map((chain: CausalChain, i: number) => (
+                {interventionResult.causal_chains?.slice(0, 8).map((chain: PropagationChain, i: number) => (
                   <div key={i} style={{
                     display: "flex", justifyContent: "space-between", alignItems: "center",
                     padding: "10px 14px", background: "rgba(0,0,0,0.2)", borderRadius: 8,
@@ -277,8 +277,8 @@ export default function CausalPage() {
                     </div>
                     <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
                       <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: chain.causal_strength > 0.5 ? "#ef4444" : "#f59e0b" }}>
-                          {(chain.causal_strength * 100).toFixed(0)}%
+                        <div style={{ fontSize: 12, fontWeight: 700, color: (chain.propagation_strength ?? chain.causal_strength ?? 0) > 0.5 ? "#ef4444" : "#f59e0b" }}>
+                          {((chain.propagation_strength ?? chain.causal_strength ?? 0) * 100).toFixed(0)}%
                         </div>
                         <div style={{ fontSize: 9, color: "var(--text-muted)" }}>Strength</div>
                       </div>

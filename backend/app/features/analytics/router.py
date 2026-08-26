@@ -13,6 +13,7 @@ from sqlalchemy import func, text  # type: ignore
 from app.core.dependencies import get_db, require_auth  # type: ignore
 from app.models import SupplyData, WorldEvent  # type: ignore
 from app.core.orchestrator import get_analysis_result  # type: ignore
+from app.utils.supply_metrics import completeness_score  # type: ignore
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
@@ -260,9 +261,8 @@ def data_quality(db: Session = Depends(get_db), user: dict = Depends(require_aut
 
     total = len(df)
 
-    # Completeness: rows where no column is null
-    complete_rows = int(df.notna().all(axis=1).sum())
-    completeness = round(complete_rows / total, 4)
+    # Completeness: required supply-chain fields only.
+    completeness = round(completeness_score(df), 4)
 
     # Duplicate rate on shipment_id (ignore nulls)
     if "shipment_id" in df.columns:

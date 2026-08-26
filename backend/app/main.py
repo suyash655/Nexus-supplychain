@@ -325,7 +325,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
 )
 app.add_middleware(AuditMiddleware)
@@ -399,7 +399,6 @@ from app.routers.health import router as health_router  # type: ignore
 from app.routers.suppliers import router as suppliers_router  # type: ignore
 from app.routers.analysis import router as analysis_router  # type: ignore
 from app.routers.remaining import (  # type: ignore
-    connectors_router,
     pipeline_router,
     causal_router,
     scheduler_router,
@@ -412,9 +411,7 @@ from app.routers.response_planning import router as response_planning_router  # 
 from app.routers.graphql import router as graphql_router  # type: ignore
 from app.routers.websocket import router as websocket_router  # type: ignore
 from app.routers.data_management import router as data_management_router  # type: ignore
-from app.routers.advanced_analytics import router as advanced_analytics_router  # type: ignore
 from app.routers.batch_operations import router as batch_operations_router  # type: ignore
-from app.routers.export_reporting import router as export_reporting_router  # type: ignore
 from app.routers.monitoring import router as monitoring_router  # type: ignore
 from app.routers.control_tower import router as control_tower_router  # type: ignore
 from app.features.planning.inventory.router import router as inventory_optimization_router  # type: ignore
@@ -446,9 +443,7 @@ app.include_router(response_planning_router)
 app.include_router(graphql_router)
 app.include_router(websocket_router)
 app.include_router(data_management_router)
-app.include_router(advanced_analytics_router)
 app.include_router(batch_operations_router)
-app.include_router(export_reporting_router)
 app.include_router(monitoring_router)
 app.include_router(control_tower_router)
 app.include_router(inventory_optimization_router)

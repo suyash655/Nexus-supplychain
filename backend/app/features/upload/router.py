@@ -14,7 +14,7 @@ from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, B
 from sqlalchemy.orm import Session  # type: ignore
 
 from app.core.dependencies import get_db, require_auth  # type: ignore
-from app.models import SupplyData, UploadHistory  # type: ignore
+from app.models import AnalysisResult, SupplyData, UploadHistory  # type: ignore
 from app.core.config import settings  # type: ignore
 from app.core.orchestrator import is_analyzing, run_full_analysis as _run, _get_engine_kwargs  # type: ignore
 from app.utils.schema_fingerprints import detect_schema  # type: ignore
@@ -111,7 +111,9 @@ async def upload_file(
     # This ensures each upload replaces the previous dataset instead of accumulating
     try:
         deleted_count = db.query(SupplyData).delete()
+        deleted_analysis = db.query(AnalysisResult).delete()
         logger_upload.info(f"[NEXUS] Cleared {deleted_count} existing records from SupplyData")
+        logger_upload.info(f"[NEXUS] Cleared {deleted_analysis} cached analysis results")
         db.commit()
     except Exception as e:
         db.rollback()

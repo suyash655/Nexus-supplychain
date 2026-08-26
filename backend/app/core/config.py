@@ -22,6 +22,7 @@ class Settings:
     APP_NAME: str = "NEXUS"
     APP_VERSION: str = "3.0.0"
     APP_DESCRIPTION: str = "Autonomous Data Intelligence Platform for Supply Chain"
+    BASE_DIR: str = str(_PROJECT_ROOT)
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
 
     # ── Database ──
@@ -58,7 +59,7 @@ class Settings:
     S3_ENDPOINT: Optional[str] = os.getenv("S3_ENDPOINT")  # MinIO compat
 
     # ── CORS ──
-    CORS_ORIGINS: list = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8000").split(",")
+    CORS_ORIGINS: list = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000,http://172.20.138.103:3000").split(",")
 
     # ── Pipeline ──
     MAX_PIPELINE_WORKERS: int = int(os.getenv("MAX_PIPELINE_WORKERS", "4"))

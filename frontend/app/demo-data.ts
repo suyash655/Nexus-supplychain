@@ -98,3 +98,84 @@ export const DEMO_WORLD_IMPACT = {
     { id: "SteelMax Inc", reason: "Raw material transit delays", risk_increment: 4 },
   ],
 };
+
+// ── Demo graph data for the Network page ──
+export const DEMO_GRAPH = {
+  nodes: [
+    // Suppliers
+    { id: "supplier:Apex Materials",  type: "supplier",  name: "Apex Materials",  shipments: 187, avg_delay: 8.3,  total_cost: 892000 },
+    { id: "supplier:GlobalTech Co",   type: "supplier",  name: "GlobalTech Co",   shipments: 142, avg_delay: 6.9,  total_cost: 654000 },
+    { id: "supplier:SteelMax Inc",    type: "supplier",  name: "SteelMax Inc",    shipments: 98,  avg_delay: 5.2,  total_cost: 521000 },
+    { id: "supplier:ProLogix Asia",   type: "supplier",  name: "ProLogix Asia",   shipments: 221, avg_delay: 4.8,  total_cost: 780000 },
+    { id: "supplier:NorthStar Parts", type: "supplier",  name: "NorthStar Parts", shipments: 167, avg_delay: 4.1,  total_cost: 445000 },
+    { id: "supplier:Delta Logistics", type: "supplier",  name: "Delta Logistics", shipments: 312, avg_delay: 2.8,  total_cost: 356000 },
+    { id: "supplier:QuickShip Pro",   type: "supplier",  name: "QuickShip Pro",   shipments: 445, avg_delay: 1.2,  total_cost: 178000 },
+    // SKUs
+    { id: "sku:SKU-A001", type: "sku", name: "SKU-A001", volume: 234 },
+    { id: "sku:SKU-B002", type: "sku", name: "SKU-B002", volume: 189 },
+    { id: "sku:SKU-C003", type: "sku", name: "SKU-C003", volume: 156 },
+    { id: "sku:SKU-D004", type: "sku", name: "SKU-D004", volume: 201 },
+    { id: "sku:SKU-E005", type: "sku", name: "SKU-E005", volume: 143 },
+    // Warehouses
+    { id: "warehouse:WH-Mumbai",    type: "warehouse", name: "WH-Mumbai",    throughput: 412 },
+    { id: "warehouse:WH-Singapore", type: "warehouse", name: "WH-Singapore", throughput: 298 },
+    { id: "warehouse:WH-Frankfurt", type: "warehouse", name: "WH-Frankfurt", throughput: 187 },
+    // Regions
+    { id: "region:Asia-Pacific", type: "region", name: "Asia-Pacific", activity: 523 },
+    { id: "region:Europe",       type: "region", name: "Europe",       activity: 289 },
+    { id: "region:Americas",     type: "region", name: "Americas",     activity: 198 },
+  ],
+  edges: [
+    // Supplier → SKU
+    { source: "supplier:Apex Materials",  target: "sku:SKU-A001", weight: 1.8, edge_type: "supply" },
+    { source: "supplier:Apex Materials",  target: "sku:SKU-B002", weight: 1.5, edge_type: "supply" },
+    { source: "supplier:GlobalTech Co",   target: "sku:SKU-B002", weight: 1.4, edge_type: "supply" },
+    { source: "supplier:GlobalTech Co",   target: "sku:SKU-C003", weight: 1.2, edge_type: "supply" },
+    { source: "supplier:SteelMax Inc",    target: "sku:SKU-C003", weight: 1.1, edge_type: "supply" },
+    { source: "supplier:SteelMax Inc",    target: "sku:SKU-D004", weight: 0.9, edge_type: "supply" },
+    { source: "supplier:ProLogix Asia",   target: "sku:SKU-A001", weight: 1.0, edge_type: "supply" },
+    { source: "supplier:ProLogix Asia",   target: "sku:SKU-E005", weight: 1.3, edge_type: "supply" },
+    { source: "supplier:NorthStar Parts", target: "sku:SKU-D004", weight: 0.8, edge_type: "supply" },
+    { source: "supplier:Delta Logistics", target: "sku:SKU-E005", weight: 0.6, edge_type: "supply" },
+    { source: "supplier:QuickShip Pro",   target: "sku:SKU-A001", weight: 0.4, edge_type: "supply" },
+    // SKU → Warehouse
+    { source: "sku:SKU-A001", target: "warehouse:WH-Mumbai",    weight: 1.2, edge_type: "storage" },
+    { source: "sku:SKU-B002", target: "warehouse:WH-Singapore", weight: 1.0, edge_type: "storage" },
+    { source: "sku:SKU-C003", target: "warehouse:WH-Frankfurt", weight: 0.9, edge_type: "storage" },
+    { source: "sku:SKU-D004", target: "warehouse:WH-Mumbai",    weight: 0.8, edge_type: "storage" },
+    { source: "sku:SKU-E005", target: "warehouse:WH-Singapore", weight: 1.1, edge_type: "storage" },
+    // Warehouse → Region
+    { source: "warehouse:WH-Mumbai",    target: "region:Asia-Pacific", weight: 1.5, edge_type: "distribution" },
+    { source: "warehouse:WH-Singapore", target: "region:Asia-Pacific", weight: 1.2, edge_type: "distribution" },
+    { source: "warehouse:WH-Frankfurt", target: "region:Europe",       weight: 1.3, edge_type: "distribution" },
+    { source: "warehouse:WH-Mumbai",    target: "region:Americas",     weight: 0.7, edge_type: "distribution" },
+  ],
+};
+
+export const DEMO_GRAPH_SUMMARY = {
+  total_nodes: 18,
+  total_edges: 19,
+  density: 0.12,
+  resilience_metrics: { network_resilience_score: 67 },
+};
+
+export const DEMO_GRAPH_CENTRALITY = {
+  degree: [
+    { node_id: "supplier:Apex Materials",  degree_score: 0.85 },
+    { node_id: "supplier:GlobalTech Co",   degree_score: 0.78 },
+    { node_id: "supplier:ProLogix Asia",   degree_score: 0.72 },
+  ],
+  betweenness: [
+    { node_id: "warehouse:WH-Mumbai",    betweenness_score: 0.63 },
+    { node_id: "warehouse:WH-Singapore", betweenness_score: 0.54 },
+  ],
+  pagerank: [
+    { node_id: "supplier:Apex Materials",  pagerank_score: 0.09 },
+    { node_id: "supplier:GlobalTech Co",   pagerank_score: 0.08 },
+    { node_id: "supplier:ProLogix Asia",   pagerank_score: 0.07 },
+    { node_id: "warehouse:WH-Mumbai",      pagerank_score: 0.06 },
+    { node_id: "supplier:QuickShip Pro",   pagerank_score: 0.06 },
+    { node_id: "warehouse:WH-Singapore",   pagerank_score: 0.05 },
+    { node_id: "supplier:Delta Logistics", pagerank_score: 0.05 },
+  ],
+};

@@ -13,6 +13,52 @@ from app.engines.graph_engine import SupplyChainGraph  # type: ignore
 
 router = APIRouter(prefix="/graph", tags=["Graph"])
 
+# ── Demo graph data (used when no analysis has been run yet) ──
+_DEMO_GRAPH_VISUALIZATION = {
+    "nodes": [
+        {"id": "supplier:Apex Materials",  "type": "supplier",  "name": "Apex Materials",  "shipments": 187, "avg_delay": 8.3,  "total_cost": 892000},
+        {"id": "supplier:GlobalTech Co",   "type": "supplier",  "name": "GlobalTech Co",   "shipments": 142, "avg_delay": 6.9,  "total_cost": 654000},
+        {"id": "supplier:SteelMax Inc",    "type": "supplier",  "name": "SteelMax Inc",    "shipments": 98,  "avg_delay": 5.2,  "total_cost": 521000},
+        {"id": "supplier:ProLogix Asia",   "type": "supplier",  "name": "ProLogix Asia",   "shipments": 221, "avg_delay": 4.8,  "total_cost": 780000},
+        {"id": "supplier:NorthStar Parts", "type": "supplier",  "name": "NorthStar Parts", "shipments": 167, "avg_delay": 4.1,  "total_cost": 445000},
+        {"id": "supplier:Delta Logistics", "type": "supplier",  "name": "Delta Logistics", "shipments": 312, "avg_delay": 2.8,  "total_cost": 356000},
+        {"id": "supplier:QuickShip Pro",   "type": "supplier",  "name": "QuickShip Pro",   "shipments": 445, "avg_delay": 1.2,  "total_cost": 178000},
+        {"id": "sku:SKU-A001", "type": "sku", "name": "SKU-A001", "volume": 234},
+        {"id": "sku:SKU-B002", "type": "sku", "name": "SKU-B002", "volume": 189},
+        {"id": "sku:SKU-C003", "type": "sku", "name": "SKU-C003", "volume": 156},
+        {"id": "sku:SKU-D004", "type": "sku", "name": "SKU-D004", "volume": 201},
+        {"id": "sku:SKU-E005", "type": "sku", "name": "SKU-E005", "volume": 143},
+        {"id": "warehouse:WH-Mumbai",    "type": "warehouse", "name": "WH-Mumbai",    "throughput": 412},
+        {"id": "warehouse:WH-Singapore", "type": "warehouse", "name": "WH-Singapore", "throughput": 298},
+        {"id": "warehouse:WH-Frankfurt", "type": "warehouse", "name": "WH-Frankfurt", "throughput": 187},
+        {"id": "region:Asia-Pacific", "type": "region", "name": "Asia-Pacific", "activity": 523},
+        {"id": "region:Europe",       "type": "region", "name": "Europe",       "activity": 289},
+        {"id": "region:Americas",     "type": "region", "name": "Americas",     "activity": 198},
+    ],
+    "edges": [
+        {"source": "supplier:Apex Materials",  "target": "sku:SKU-A001", "weight": 1.8, "edge_type": "supply"},
+        {"source": "supplier:Apex Materials",  "target": "sku:SKU-B002", "weight": 1.5, "edge_type": "supply"},
+        {"source": "supplier:GlobalTech Co",   "target": "sku:SKU-B002", "weight": 1.4, "edge_type": "supply"},
+        {"source": "supplier:GlobalTech Co",   "target": "sku:SKU-C003", "weight": 1.2, "edge_type": "supply"},
+        {"source": "supplier:SteelMax Inc",    "target": "sku:SKU-C003", "weight": 1.1, "edge_type": "supply"},
+        {"source": "supplier:SteelMax Inc",    "target": "sku:SKU-D004", "weight": 0.9, "edge_type": "supply"},
+        {"source": "supplier:ProLogix Asia",   "target": "sku:SKU-A001", "weight": 1.0, "edge_type": "supply"},
+        {"source": "supplier:ProLogix Asia",   "target": "sku:SKU-E005", "weight": 1.3, "edge_type": "supply"},
+        {"source": "supplier:NorthStar Parts", "target": "sku:SKU-D004", "weight": 0.8, "edge_type": "supply"},
+        {"source": "supplier:Delta Logistics", "target": "sku:SKU-E005", "weight": 0.6, "edge_type": "supply"},
+        {"source": "supplier:QuickShip Pro",   "target": "sku:SKU-A001", "weight": 0.4, "edge_type": "supply"},
+        {"source": "sku:SKU-A001", "target": "warehouse:WH-Mumbai",    "weight": 1.2, "edge_type": "storage"},
+        {"source": "sku:SKU-B002", "target": "warehouse:WH-Singapore", "weight": 1.0, "edge_type": "storage"},
+        {"source": "sku:SKU-C003", "target": "warehouse:WH-Frankfurt", "weight": 0.9, "edge_type": "storage"},
+        {"source": "sku:SKU-D004", "target": "warehouse:WH-Mumbai",    "weight": 0.8, "edge_type": "storage"},
+        {"source": "sku:SKU-E005", "target": "warehouse:WH-Singapore", "weight": 1.1, "edge_type": "storage"},
+        {"source": "warehouse:WH-Mumbai",    "target": "region:Asia-Pacific", "weight": 1.5, "edge_type": "distribution"},
+        {"source": "warehouse:WH-Singapore", "target": "region:Asia-Pacific", "weight": 1.2, "edge_type": "distribution"},
+        {"source": "warehouse:WH-Frankfurt", "target": "region:Europe",       "weight": 1.3, "edge_type": "distribution"},
+        {"source": "warehouse:WH-Mumbai",    "target": "region:Americas",     "weight": 0.7, "edge_type": "distribution"},
+    ],
+}
+
 
 def _rebuild_graph(graph_res) -> SupplyChainGraph:
     """
@@ -29,6 +75,31 @@ def _rebuild_graph(graph_res) -> SupplyChainGraph:
     for e in edges:
         g.G.add_edge(e["source"], e["target"], **{k: v for k, v in e.items() if k not in ("source", "target")})
     return g
+
+
+@router.get("/demo")
+def graph_demo(db: Session = Depends(get_db), user: dict = Depends(require_auth)):
+    """
+    Return demo/fallback graph visualization data.
+    Used by the frontend when no real graph analysis is available yet.
+    """
+    return _DEMO_GRAPH_VISUALIZATION
+
+
+@router.get("/status")
+def graph_status(db: Session = Depends(get_db), user: dict = Depends(require_auth)):
+    """
+    Return whether real graph data is available.
+    Allows the frontend to poll until analysis completes.
+    """
+    from app.core.orchestrator import is_analyzing  # type: ignore
+    graph_res = get_analysis_result(db, "graph")
+    has_real_data = graph_res is not None and len(graph_res.get("visualization", {}).get("nodes", [])) > 0
+    return {
+        "has_real_data": has_real_data,
+        "is_analyzing": is_analyzing(),
+        "node_count": len(graph_res.get("visualization", {}).get("nodes", [])) if graph_res else 0,
+    }
 
 
 @router.get("/summary")
@@ -123,7 +194,7 @@ def deep_inference(db: Session = Depends(get_db), user: dict = Depends(require_a
     return g.deep_tier_inference(df)
 
 
-# ── Temporal Graph (T-GNN) ──
+# ── Temporal Trend Engine (legacy TGNNEngine alias) ──
 
 @router.get("/temporal-analysis")
 def temporal_analysis(db: Session = Depends(get_db), user: dict = Depends(require_auth)):
@@ -277,7 +348,16 @@ def list_scenario_runs(
 ):
     """Get a history of simulated failure scenarios."""
     from app.models.supply import ScenarioRun
+    graph_res = get_analysis_result(db, "graph")
+    current_node_ids = {
+        node.get("id")
+        for node in (graph_res or {}).get("visualization", {}).get("nodes", [])
+        if node.get("id")
+    }
+
     q = db.query(ScenarioRun).order_by(ScenarioRun.created_at.desc())
+    if current_node_ids:
+        q = q.filter(ScenarioRun.node_id.in_(current_node_ids))
     total = q.count()
     runs = q.offset(skip).limit(limit).all()
 

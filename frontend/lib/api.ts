@@ -50,7 +50,7 @@ export async function apiFetchJSON<T = unknown>(
 ): Promise<T> {
   const res = await apiFetch(path, options);
   if (!res.ok) {
-    throw new Error(`API ${res.status}: ${res.statusText}`);
+    throw await apiErrorFromResponse(res);
   }
   return res.json() as Promise<T>;
 }
@@ -70,7 +70,7 @@ export async function apiPostJSON<T = unknown>(
     ...options,
   });
   if (!res.ok) {
-    throw new Error(`API ${res.status}: ${res.statusText}`);
+    throw await apiErrorFromResponse(res);
   }
   return res.json() as Promise<T>;
 }
@@ -87,3 +87,19 @@ export async function apiFetchSafe<T = any>(path: string): Promise<T | null> {
   }
 }
 
+async function apiErrorFromResponse(res: Response): Promise<Error> {
+  try {
+    const body = await res.json();
+    if (body?.message) {
+      const suffix = body.request_id ? ` (request ${body.request_id})` : "";
+      return new Error(`${body.message}${suffix}`);
+    }
+    if (body?.detail) {
+      return new Error(typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail));
+    }
+  } catch {
+    // Fall through to a status-based message when the server did not return JSON.
+  }
+
+  return new Error(`API ${res.status}: ${res.statusText || "Request failed"}`);
+}

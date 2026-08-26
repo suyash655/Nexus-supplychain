@@ -1,284 +1,210 @@
 <div align="center">
-  <img src="docs/assets/banner.png" alt="NEXUS Banner" width="100%" />
-</div>
 
-<br />
+<img src="https://img.shields.io/badge/NEXUS-Supply%20Chain%20Intelligence-06b6d4?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTIgMkw3IDcgMiAxMmw1IDUgNSA1IDUtNSA1LTUtNS01LTUtNXoiIGZpbGw9IndoaXRlIi8+PC9zdmc+" alt="NEXUS Banner" />
 
-<div align="center">
+# NEXUS — Autonomous Supply Chain Intelligence Platform
 
-# NEXUS — Causal-AI Supply Chain Platform
+*Upload your CSV. Watch the graph build itself. Get AI-driven risk mitigations in seconds.*
 
-**The first open-source platform that treats supply chains as living causal graphs, not static spreadsheets.**
-
-[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=flat-square&logo=nextdotjs&logoColor=white)](https://nextjs.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
-[![License](https://img.shields.io/badge/License-Research%20Only-lightgrey?style=flat-square)](#license)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](CONTRIBUTING.md)
-
-<br/>
-
-[**Live Demo**](https://nexus-supplychain.vercel.app) · [**API Docs**](https://nexus-backend.onrender.com/docs) · [**Architecture Guide**](./ARCHITECTURE.md) · [**Report a Bug**](.github/ISSUE_TEMPLATE/bug_report.md) · [**Request a Feature**](.github/ISSUE_TEMPLATE/feature_request.md)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com)
+[![Next.js](https://img.shields.io/badge/Next.js-15-000000?style=flat-square&logo=next.js)](https://nextjs.org)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python)](https://python.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript)](https://typescriptlang.org)
+[![LangGraph](https://img.shields.io/badge/LangGraph-Agent-FF6B6B?style=flat-square)](https://github.com/langchain-ai/langgraph)
+[![License](https://img.shields.io/badge/License-Research%20%26%20Evaluation-yellow?style=flat-square)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/yourusername/nexus/deploy.yml?style=flat-square&label=CI)](https://github.com/yourusername/nexus/actions)
 
 </div>
 
 ---
 
-<details>
-<summary><b>📋 Table of Contents</b></summary>
-
-- [The Problem](#-the-problem)
-- [What Makes NEXUS Different](#-what-makes-nexus-different)
-- [Platform Screenshots](#-platform-screenshots)
-- [Architecture](#-architecture)
-- [Tech Stack](#-tech-stack)
-- [Project Structure](#-project-structure)
-- [Quick Start](#-quick-start)
-- [Environment Variables](#-environment-variables)
-- [API Reference](#-api-reference)
-- [Deployment](#-deployment)
-- [Contributing](#-contributing)
-- [License](#-license)
-
-</details>
+<!-- TODO: Replace with an actual screen recording GIF showing: upload CSV → dashboard populates → graph renders → mitigation agent fires -->
+![NEXUS Demo](https://placehold.co/1200x600/030712/06b6d4?text=NEXUS+Dashboard+Demo+GIF+Here)
+*↑ Replace with a screen recording of the full upload → analysis → graph → mitigation flow*
 
 ---
 
-## 🧩 The Problem
+## The Problem
 
-Every Fortune 500 company runs its supply chain on dashboards built for a world that no longer exists. They show you *what happened* — not *why*, and not *what will happen if*.
+Supply chain risk is opaque. A delayed shipment from a Tier-2 supplier in Vietnam can cascade into a production halt in Germany — and most teams don't find out until it's too late.
 
-Traditional tools fail on three axes:
+Existing tools either **require expensive ERP integration** (SAP, Oracle) or are **spreadsheet dashboards** that show data without telling you what to *do* about it.
 
-```
-❌  They correlate.  NEXUS causes.
-❌  They snapshot.   NEXUS streams.
-❌  They report.     NEXUS decides.
-```
-
-When a port closes in Shanghai, your ERP tells you inventory is low. NEXUS tells you **which of your 847 suppliers will be affected, in what order, and what to do about it in the next 72 hours** — before the disruption reaches your factory floor.
+**NEXUS is neither.** Drop in a CSV, and within 60 seconds you get:
+- A live network graph of your entire supplier topology
+- ML-ranked risk scores with anomaly detection
+- An AI agent that identifies the highest-risk suppliers and proposes mitigation plans — waiting for your approval before acting
 
 ---
 
-## ✨ What Makes NEXUS Different
+## ✨ Key Features
 
-| Feature | Traditional SCM | NEXUS |
-|---|---|---|
-| **Risk Model** | Threshold alerts | Bayesian causal DAG |
-| **Simulation** | Historical averages | Monte Carlo + T-GNN embeddings |
-| **AI** | Rule-based chatbot | Groq LLaMA-3.3 with supply chain context |
-| **Graph** | Static org chart | Dynamic temporal supply network |
-| **Explainability** | Black box | Full XAI feature attribution |
-| **Response** | Manual playbooks | Automated SOP generation |
-
-### Core Engines
-
-- 🕸️ **Causal Supply Chain Graph (CSCG)** — Bayesian DAG with interventional query support. Ask *"What happens to delivery times if Supplier A has a 3-week delay?"* and get a probability distribution, not a guess.
-- ⏱️ **Temporal Graph Neural Network (T-GNN)** — Learns dynamic supplier relationships over time. Detects 2.5× more latent bottlenecks than static graph analysis.
-- 🎲 **Monte Carlo Risk Engine** — Runs 10,000+ stochastic disruption scenarios in seconds. Outputs probability distributions over cost, delay, and supplier failure.
-- 🤖 **AI Co-Pilot (Groq LLaMA-3.3)** — Natural language interface for non-technical executives. "What is our biggest risk this quarter?" gets a 3-paragraph board-ready answer.
-- 🔬 **Explainable AI (XAI)** — Every prediction comes with feature attribution. No black boxes in production.
-- 🌱 **ESG Compliance Engine** — Automated scoring and audit trail for Environmental, Social, and Governance metrics across the entire supplier network.
-
----
-
-## 📸 Platform Screenshots
-
-<table>
-  <tr>
-    <td width="50%">
-      <b>🛡️ Command Center</b><br/>
-      <img src="docs/assets/dashboard.png" alt="Command Center Dashboard" width="100%"/>
-      <sub>Global risk KPIs, live event feed, and Monte Carlo disruption probabilities in a single pane of glass.</sub>
-    </td>
-    <td width="50%">
-      <b>🔬 Causal Analytics</b><br/>
-      <img src="docs/assets/analytics.png" alt="Causal Analytics" width="100%"/>
-      <sub>What-If scenario planning, XAI feature importance, and interventional causal queries.</sub>
-    </td>
-  </tr>
-</table>
-
----
-
-## 📐 Architecture
-
-NEXUS is a **Modular Monolith** using Feature/Domain-Driven Design. Every business domain owns its router, engine, and schemas together — no more hunting across 4 directories to understand one feature.
-
-```
-  Browser (Next.js 16 · TypeScript · Glassmorphism UI)
-      │
-      │  REST/JSON over HTTPS
-      ▼
-  FastAPI Gateway  ──  JWT Auth  ──  Audit Middleware  ──  Rate Limiting
-      │
-      ├── features/analytics/     (Risk scoring, KPI, Advanced Analytics)
-      ├── features/planning/
-      │       ├── demand/         (IBP demand planning, T-GNN forecasting)
-      │       ├── supply/         (Supplier optimization, sourcing)
-      │       └── inventory/      (Safety stock, multi-echelon optimization)
-      ├── features/xai/           (Feature importance, counterfactuals)
-      ├── features/export/        (CSV, JSON, Tableau, Power BI)
-      ├── features/auth/          (JWT, RBAC, audit trail)
-      └── common/                 (Shared models, schemas, utilities)
-           │
-           ▼
-      Engine Layer (Singleton services, initialized once at startup)
-      ├── SupplyChainAnalyzer     ─── IsolationForest + Holt-Winters + IQR
-      ├── CausalGenomeEngine      ─── Bayesian DAG (PyMC) + interventions
-      ├── TGNNEngine              ─── Temporal Graph Neural Network
-      ├── MonteCarloEngine        ─── Stochastic disruption simulations
-      ├── AICopilot               ─── Groq LLaMA-3.3 / AWS Bedrock
-      ├── XAIEngine               ─── SHAP-style attributions
-      ├── KPIEngine               ─── Real-time KPI monitoring + alerts
-      └── SOPEngine               ─── Automated playbook generation
-           │
-           ▼
-      Data Layer  ──  SQLite (dev)  ──  PostgreSQL (prod)
-```
-
-**[Read the full Architecture Guide →](./ARCHITECTURE.md)**
+- 🧠 **Multi-Engine ML Pipeline** — Isolation Forest anomaly detection, Holt-Winters forecasting, composite risk scoring, and Monte Carlo disruption simulations run automatically after every upload
+- 🕸️ **Live Supply Chain Graph** — NetworkX-powered directed graph with centrality analysis, cascade simulation, and failure impact scoring. Nodes are your suppliers, SKUs, warehouses, and regions — edges are the relationships between them
+- 🤖 **LangGraph Mitigation Agent** — A 6-node stateful agent that detects critical risk, searches past incident context via ChromaDB RAG, finds backup suppliers, runs probabilistic simulations, drafts an LLM action plan, then waits for human approval before executing
+- 📊 **Explainability (XAI)** — SHAP-based feature importance and counterfactual explanations ("reduce Alpha Corp's delay by 3 days and risk drops 18 points")
+- 🔒 **Production-Ready Auth** — JWT with 60-min access tokens, 30-day rotating refresh tokens, bcrypt hashing, RBAC (admin / manager / analyst / viewer), rate limiting, and a full audit trail on every API call
+- 📡 **Real-Time Control Tower** — WebSocket-powered live alert feed with auto-reconnect, incident management, and correlation-based root cause analysis
+- 🌐 **Works Offline** — All ML runs locally. The LLM copilot falls back to deterministic rule-based summaries when no API key is configured. No cloud dependency required for core functionality
 
 ---
 
 ## 🛠️ Tech Stack
 
-<table>
-  <tr>
-    <th>Layer</th>
-    <th>Technology</th>
-    <th>Why</th>
-  </tr>
-  <tr>
-    <td><b>Frontend</b></td>
-    <td>Next.js 16, React 18, TypeScript 5, Recharts</td>
-    <td>App Router, SSR, type safety end-to-end</td>
-  </tr>
-  <tr>
-    <td><b>Backend</b></td>
-    <td>FastAPI, Python 3.10+, SQLAlchemy 2.0</td>
-    <td>Async performance, auto OpenAPI docs, type validation</td>
-  </tr>
-  <tr>
-    <td><b>AI / ML</b></td>
-    <td>Groq LLaMA-3.3, PyMC, NetworkX, Scikit-Learn</td>
-    <td>Causal inference, Bayesian reasoning, graph analysis</td>
-  </tr>
-  <tr>
-    <td><b>Database</b></td>
-    <td>SQLite (dev) / PostgreSQL (prod)</td>
-    <td>Zero-config local dev, enterprise-ready in prod</td>
-  </tr>
-  <tr>
-    <td><b>Auth</b></td>
-    <td>JWT + bcrypt + RBAC</td>
-    <td>Stateless, auditable, permission-scoped</td>
-  </tr>
-  <tr>
-    <td><b>Infra</b></td>
-    <td>Docker, AWS CDK, Vercel, Render</td>
-    <td>Container-first, IaC, zero-downtime deploys</td>
-  </tr>
-</table>
+| Layer | Technology | Why |
+|---|---|---|
+| **Frontend** | Next.js 15 (App Router) + TypeScript | App Router enables server components for layout; TypeScript catches API shape mismatches at compile time |
+| **UI** | Tailwind CSS + custom design tokens | Dark glassmorphism theme, consistent spacing system via CSS variables |
+| **Charts** | Recharts + react-force-graph-2d | Recharts for analytics charts; D3-backed force graph for the supply chain network |
+| **State** | React `useApi` hook + module-level cache | Custom SWR-style hook with deduplication, TTL, and cache invalidation — no Redux needed |
+| **Backend** | FastAPI (Python 3.11+) | Async request handling, auto-generated OpenAPI docs, Pydantic validation |
+| **ML** | scikit-learn, NetworkX, statsmodels | Isolation Forest, DBSCAN clustering, Holt-Winters; all run in-process, no external services |
+| **AI Agent** | LangGraph + LangChain | Explicit state machine with human-in-the-loop checkpoints; each node is traced and stored |
+| **LLM** | Groq / AWS Bedrock / Offline fallback | Provider-agnostic abstraction — swap keys in `.env` with no code changes |
+| **Vector DB** | ChromaDB | Local RAG over past supply chain incidents for agent context |
+| **Database** | SQLite (dev) / PostgreSQL (prod) | SQLAlchemy ORM; WAL mode for SQLite concurrency; Alembic migrations |
+| **Auth** | PyJWT + bcrypt + slowapi | HS256 tokens, bcrypt cost-12 hashing, IP-based rate limiting on auth endpoints |
+| **DevOps** | Docker + GitHub Actions + AWS CDK | Multi-stage Dockerfiles; CI runs tests → build → Lighthouse → deploy to ECS Fargate |
 
 ---
 
-## 📂 Project Structure
+## 🏗️ Architecture
 
 ```
-nexus/
-├── backend/                          ← FastAPI Application
-│   └── app/
-│       ├── core/                     ← Config, Database, Auth, Orchestrator
-│       ├── features/                 ← Domain-Driven Modules
-│       │   ├── analytics/            ← Risk Analytics APIs + Engines
-│       │   ├── auth/                 ← JWT Authentication
-│       │   ├── export/               ← CSV / JSON / Tableau / Power BI
-│       │   ├── planning/
-│       │   │   ├── demand/           ← Demand Planning + T-GNN Forecasting
-│       │   │   ├── supply/           ← Supply Planning Engine
-│       │   │   └── inventory/        ← Multi-Echelon Inventory Optimization
-│       │   └── xai/                  ← Explainable AI Attributions
-│       ├── common/                   ← Shared Models, Schemas, Utils
-│       ├── engines/                  ← Singleton AI/ML Engines
-│       ├── agents/                   ← Autonomous Agent Orchestration
-│       └── main.py                   ← Entry point + lifespan management
-│
-├── frontend/                         ← Next.js 16 Web Application
-│   ├── app/                          ← App Router (22 pages)
-│   ├── components/
-│   │   ├── layout/                   ← Sidebar, TopNav
-│   │   ├── charts/                   ← Recharts wrappers
-│   │   └── feedback/                 ← Toast, Skeleton, Markdown
-│   └── styles/                       ← CSS Design System + Tokens
-│
-├── infra/                            ← AWS CDK Infrastructure-as-Code
-├── docs/                             ← Architecture docs + assets
-├── research/                         ← Academic papers + references
-├── .github/                          ← CI/CD, Issue Templates, PR Template
-├── docker-compose.yml                ← Full-stack local dev
-└── .env.example                      ← Environment variable template
+┌──────────────────────────────────────────────────────────────┐
+│                     BROWSER (Next.js 15)                     │
+│  Upload │ Dashboard │ Graph │ Copilot │ Mitigation │ Reports  │
+└──────────────────┬───────────────────────────────────────────┘
+                   │  REST + WebSocket
+┌──────────────────▼───────────────────────────────────────────┐
+│               FASTAPI BACKEND  :8000                         │
+│                                                              │
+│  Auth · Upload · Analytics · Graph · XAI · Control Tower     │
+│  Mitigation · Planning · Export · Connectors  (+20 more)     │
+│                                                              │
+│  ── Orchestrator ──────────────────────────────────────────  │
+│  On every upload → run_full_analysis() fires 6 engines in    │
+│  sequence, saves JSON blobs to analysis_results table        │
+│                                                              │
+│  ── LangGraph Agent ───────────────────────────────────────  │
+│  assess_risk → rag_context → find_backups → monte_carlo →    │
+│  llm_plan → save_pending  [awaits human approval]            │
+└──────────────────┬───────────────────────────────────────────┘
+                   │  SQLAlchemy ORM
+┌──────────────────▼───────────────────────────────────────────┐
+│  SQLite / PostgreSQL   │   ChromaDB (RAG)                    │
+│  supply_data           │   past incident embeddings          │
+│  analysis_results      │                                     │
+│  agent_traces          │                                     │
+└──────────────────────────────────────────────────────────────┘
 ```
+
+**Data flow in one sentence:** A CSV upload atomically replaces `supply_data`, triggers a background ML pipeline that writes results to `analysis_results`, and every dashboard page reads from that cache — so the UI is always fast regardless of data size.
+
+> **Honesty note:** `TGNNEngine` is a temporal trend engine (not a true GNN). `CausalGenomeEngine` is graph-based risk propagation (not Bayesian do-calculus). See [`docs/ML_AI_HONESTY.md`](docs/ML_AI_HONESTY.md) for the complete accuracy log.
 
 ---
 
-## ⚡ Quick Start
-
-> **Get the full platform running in under 5 minutes.**
+## 🚀 Getting Started
 
 ### Prerequisites
 
-- Python 3.10+
-- Node.js 18+
-- A free [Groq API Key](https://console.groq.com) (takes 30 seconds)
+| Tool | Version | Check |
+|---|---|---|
+| Python | 3.11+ | `python --version` |
+| Node.js | 18+ | `node --version` |
+| npm | 9+ | `npm --version` |
+| Git | any | `git --version` |
 
-### Option A — Docker (Recommended)
-
-```bash
-git clone https://github.com/YOUR_USERNAME/nexus.git
-cd nexus
-cp .env.example .env   # Add your GROQ_API_KEY
-docker-compose up --build
-```
-
-Open [http://localhost:3000](http://localhost:3000). Done.
-
----
-
-### Option B — Manual Setup
-
-**1. Clone & configure**
+### 1 · Clone
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/nexus.git
+git clone https://github.com/yourusername/nexus.git
 cd nexus
-cp .env.example .env
-# Edit .env — set GROQ_API_KEY at minimum
 ```
 
-**2. Backend**
+### 2 · Backend Setup
 
 ```bash
 cd backend
-python -m venv .venv
+
+# Create and activate virtual environment
+python -m venv ../.venv
 
 # Windows
-.venv\Scripts\activate
-# macOS/Linux
-source .venv/bin/activate
+..\.venv\Scripts\activate
 
+# macOS / Linux
+source ../.venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
-python -m uvicorn app.main:app --reload --port 8000
 ```
 
-**3. Frontend** *(new terminal)*
+### 3 · Environment Variables
 
 ```bash
+# Copy the example file
+cp .env.example .env        # macOS/Linux
+copy .env.example .env      # Windows
+```
+
+Open `.env` and configure:
+
+```env
+# ── Required ────────────────────────────────────────────────────────
+DATABASE_URL=sqlite:///data/synchain.db
+SECRET_KEY=change-me-to-a-random-64-char-string-in-production
+
+# ── CORS ─────────────────────────────────────────────────────────────
+CORS_ORIGINS=http://localhost:3000
+
+# ── Demo Mode (disables auth requirement for local exploration) ──────
+ALLOW_DEMO=true
+
+# ── LLM (optional — system works fully offline without these) ────────
+LLM_PROVIDER=offline          # or: groq | bedrock
+GROQ_API_KEY=                 # get free key at console.groq.com
+GROQ_MODEL=llama-3.3-70b-versatile
+```
+
+> **Note:** `SECRET_KEY` must be changed before any non-local deployment. The server will refuse to start in production mode with the default value.
+
+### 4 · Run the Backend
+
+```bash
+# From the backend/ directory, with .venv activated
+cd backend
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+You should see:
+```
+INFO  [NEXUS] ✓ SupplyChainAnalyzer initialised
+INFO  [NEXUS] ✓ SupplyChainGraph initialised
+INFO  [NEXUS] All engines initialised successfully — server ready
+INFO  Uvicorn running on http://0.0.0.0:8000
+```
+
+### 5 · Frontend Setup
+
+```bash
+# In a new terminal, from the project root
 cd frontend
 npm install
+```
+
+Create `frontend/.env.local`:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+```bash
 npm run dev
 ```
+
+### 6 · Open the App
 
 | Service | URL |
 |---|---|
@@ -286,102 +212,166 @@ npm run dev
 | **API** | http://localhost:8000 |
 | **API Docs (Swagger)** | http://localhost:8000/docs |
 
----
-
-## 🔑 Environment Variables
-
-Copy `.env.example` to `.env` and configure:
+### Alternative: Docker Compose
 
 ```bash
-# ── Required ──────────────────────────────────────────────────────────────────
-GROQ_API_KEY=gsk_...           # Get free at https://console.groq.com
-SECRET_KEY=change-me-in-prod   # Generate: python -c "import secrets; print(secrets.token_hex(32))"
-
-# ── Optional (have sensible defaults) ─────────────────────────────────────────
-DATABASE_URL=sqlite:///data/synchain.db
-GROQ_MODEL=llama-3.3-70b-versatile
-LLM_PROVIDER=groq              # groq | bedrock | offline
-CORS_ORIGINS=http://localhost:3000
-ALLOW_DEMO=true                # Loads synthetic data on first start
+# From project root — spins up both services
+docker-compose up
 ```
 
 ---
 
-## 🌐 API Reference
+## 📖 Usage
 
-All endpoints except `/health` require `Authorization: Bearer <token>`.
+### Upload Your First Dataset
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/auth/login` | Obtain JWT access token |
-| `POST` | `/upload` | Ingest CSV / Excel supply data |
-| `POST` | `/analyze` | Run full ML + causal pipeline |
-| `GET`  | `/analytics/summary` | Risk KPIs + dashboard data |
-| `GET`  | `/graph/topology` | Supplier network graph |
-| `POST` | `/copilot/query` | Natural language Co-Pilot |
-| `POST` | `/causal/intervention` | What-If scenario simulation |
-| `GET`  | `/xai/feature-importance` | SHAP-style feature attribution |
-| `GET`  | `/export/csv` | Tableau-ready data export |
-| `GET`  | `/export/json` | Power BI data export |
-| `GET`  | `/esg/scores` | ESG compliance scores |
-| `GET`  | `/health` | System health (public) |
+1. Navigate to **http://localhost:3000/upload**
+2. Drop any CSV with supply chain data (supplier, SKU, delay_days, cost columns — others are auto-detected)
+3. Review the column mapping preview and click **Upload & Analyze**
+4. The dashboard auto-redirects and populates within ~60 seconds as the ML pipeline runs
 
-> Full interactive reference at `/docs` when running locally.
+**Don't have a CSV?** Run the included test data generator:
+
+```bash
+cd backend
+python test_upload_flow.py   # generates 50-row pseudo CSV and runs full pipeline validation
+```
+
+### Exploring the Dashboard
+
+```
+/dashboard       → KPI strip, supplier risk leaderboard, trend charts
+/graph           → Interactive supply chain network (click nodes, simulate failures)
+/analytics       → Deep-dive: time-series, regional breakdown, data quality
+/xai             → SHAP feature importance + counterfactual "what if" explanations
+/control-tower   → Live alert feed, incident management, root cause correlation
+/mitigation      → Review and approve/reject AI agent action plans
+/copilot         → Natural language Q&A over your supply chain data
+```
+
+### Demo Mode (No Login Required)
+
+Click **"Skip to demo →"** on the login page to explore with pre-loaded sample data. No credentials needed.
 
 ---
 
-## 🚀 Deployment
+## 🔐 Environment Variables Reference
 
-### Frontend → Vercel
+| Variable | Default | Description |
+|---|---|---|
+| `DATABASE_URL` | `sqlite:///data/synchain.db` | SQLAlchemy connection string |
+| `SECRET_KEY` | `dev-secret` | JWT signing key — **change in production** |
+| `CORS_ORIGINS` | `http://localhost:3000` | Comma-separated allowed origins |
+| `ALLOW_DEMO` | `true` | Enables unauthenticated demo access |
+| `LLM_PROVIDER` | `offline` | `offline` \| `groq` \| `bedrock` |
+| `GROQ_API_KEY` | _(empty)_ | Groq API key for LLM features |
+| `MAX_UPLOAD_BYTES` | `52428800` | Max upload file size (50 MB default) |
+| `MAX_ANALYSIS_ROWS` | `100000` | Row cap for ML pipeline |
+| `DEBUG` | `false` | Enables hot-reload and verbose logging |
 
-```bash
-# Install Vercel CLI
-npm i -g vercel
+---
 
-cd frontend
-vercel --prod
+## 🧩 Challenges & Learnings
+
+### The Hardest Problem: Making Async Data Feel Synchronous
+
+The core UX challenge was this: the ML pipeline takes 30–90 seconds after a CSV upload. If you just show a spinner, users bounce. If you redirect immediately, they see empty charts.
+
+**What I tried first:** A single long-polling endpoint that blocked until analysis finished. This caused request timeouts and didn't scale past one user.
+
+**What I built instead:** A three-layer freshness system:
+1. The upload response returns immediately (rows inserted ✓)
+2. The dashboard reads live DB aggregates for analytics (supplier counts, totals) — these are available *instantly*
+3. Heavier analysis results (ML risk scores, graph topology) are served from an `analysis_results` cache table, which the pipeline populates asynchronously
+4. The graph page polls `/graph/status` every 5 seconds and swaps in real data the moment it lands — showing demo fallback data in the meantime
+
+This meant users see *something useful immediately* and *real data progressively* — which is exactly how production dashboards like Datadog and Grafana work.
+
+**Key takeaways:**
+
+- **Decouple write latency from read latency.** Background workers + result caches are the right pattern for any slow computation that multiple clients need to read.
+- **Design for degraded mode.** Every engine in NEXUS can fail independently. The server starts in degraded mode and keeps serving the healthy endpoints. This forced me to think about fault isolation rather than assuming happy-path.
+- **Data shape bugs are hard to debug without types.** The frontend is fully TypeScript with strict API response shapes. I caught at least a dozen bugs at compile time that would have been silent runtime `undefined` errors in plain JavaScript.
+
+---
+
+## 🔭 Future Enhancements
+
+1. **Multi-tenant SaaS mode** — The DB schema already has a `tenant_id` column on every table and row-level security SQL in `migrations/`. Wiring this through the auth layer to a subscription system is the next step.
+
+2. **Real-time streaming ML** — Currently the pipeline runs once per upload. The architecture (Kafka-ready connector interfaces, a DataScheduler engine, and the streaming processor in `data_lake.py`) is designed for continuous ingestion. Connecting a live ERP feed would make risk scores update in real time.
+
+3. **True causal inference** — `CausalGenomeEngine` currently does graph-based propagation. Replacing the internals with [DoWhy](https://github.com/py-why/dowhy) or [CausalNex](https://github.com/quantumblacklabs/causalnex) would allow the system to answer "did this supplier's delay *cause* the cost increase?" rather than just "are they correlated?"
+
+---
+
+## 📁 Project Structure
+
 ```
-
-Set `NEXT_PUBLIC_API_URL` to your backend URL in Vercel's environment settings.
-
-### Backend → Render / Railway
-
-1. Connect your GitHub repo
-2. **Root Directory**: `backend`
-3. **Build Command**: `pip install -r requirements.txt`
-4. **Start Command**: `python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-5. Add all environment variables from `.env.example`
+nexus/
+├── backend/
+│   ├── app/
+│   │   ├── main.py              ← FastAPI entry point, lifespan, middleware
+│   │   ├── routers/             ← 30 API route modules (one domain per file)
+│   │   ├── engines/             ← ML/AI engine singletons
+│   │   ├── core/                ← Config, DB, errors, orchestrator
+│   │   ├── models/              ← SQLAlchemy ORM models
+│   │   ├── services/upload/     ← Parser, schema detector, validator
+│   │   └── middleware/          ← JWT auth, audit trail
+│   ├── agent/
+│   │   ├── mitigation_graph.py  ← LangGraph 6-node agent
+│   │   ├── llm_client.py        ← Groq/Bedrock/offline abstraction
+│   │   └── tools.py             ← Supplier lookup, notification tools
+│   ├── tests/                   ← Pytest suite
+│   ├── Dockerfile
+│   └── requirements.txt
+│
+├── frontend/
+│   ├── app/                     ← Next.js App Router pages
+│   │   ├── dashboard/           ← Command center
+│   │   ├── upload/              ← Upload wizard + column mapping
+│   │   ├── graph/               ← Supply chain network (D3)
+│   │   ├── analytics/           ← Deep analytics views
+│   │   ├── control-tower/       ← Real-time ops board
+│   │   ├── mitigation/          ← Agent approval UI
+│   │   ├── xai/                 ← Explainability (SHAP)
+│   │   └── copilot/             ← AI chat
+│   ├── hooks/useApi.ts          ← Custom SWR-style data fetching
+│   ├── lib/api.ts               ← Typed API client
+│   └── Dockerfile.frontend
+│
+├── .github/workflows/deploy.yml ← CI/CD pipeline
+├── docker-compose.yml
+├── ARCHITECTURE.md              ← Deep-dive system design doc
+└── README.md                    ← You are here
+```
 
 ---
 
 ## 🤝 Contributing
 
-Contributions make the open-source community extraordinary. Any contribution is **greatly appreciated**.
+This is a solo learning project, but issues and suggestions are welcome.
 
-1. Fork the repository
-2. Create your feature branch: `git checkout -b feat/amazing-feature`
-3. Commit your changes: `git commit -m 'feat: add amazing feature'`
-4. Push to the branch: `git push origin feat/amazing-feature`
-5. Open a Pull Request
-
-See [**CONTRIBUTING.md**](CONTRIBUTING.md) for detailed guidelines, coding standards, and the development workflow.
+1. Fork the repo
+2. Create a branch: `git checkout -b feature/your-idea`
+3. Commit your changes: `git commit -m 'feat: add your feature'`
+4. Push and open a Pull Request
 
 ---
 
 ## 📄 License
 
-Distributed under a **Research & Evaluation License**. See [`LICENSE`](LICENSE) for more information.
-
-This project is free to use for learning, research, and evaluation. For commercial or production use, please open a discussion.
+Distributed under a **Research & Evaluation License** — free to use, study, and build upon for non-commercial purposes. See [`LICENSE`](LICENSE) for details.
 
 ---
 
 <div align="center">
 
-**If NEXUS saved you time or gave you ideas, please consider giving it a ⭐ — it helps more people discover the project.**
+**Built by [Your Name](https://yourportfolio.com)**
 
-<br/>
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=flat-square&logo=linkedin)](https://linkedin.com/in/yourprofile)
+[![Portfolio](https://img.shields.io/badge/Portfolio-Visit-06b6d4?style=flat-square&logo=vercel)](https://yourportfolio.com)
 
-Built with ❤️ using FastAPI · Next.js · Groq LLaMA-3.3 · Bayesian Causal AI
+*If this project helped you or impressed you — a ⭐ on GitHub goes a long way for a fresher's portfolio.*
 
 </div>

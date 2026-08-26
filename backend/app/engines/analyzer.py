@@ -8,6 +8,7 @@ from scipy import stats
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timezone
 from app.engines.forecaster import TimeSeriesForecaster, _safe
+from app.utils.supply_metrics import completeness_score, on_time_mask
 
 logger_ml = logging.getLogger("nexus.ml_engine")
 
@@ -260,7 +261,7 @@ class RiskScorer:
 
             if "delay_days" in group.columns:
                 delays = pd.to_numeric(group["delay_days"], errors="coerce").fillna(0)
-                factors["delay_frequency"] = min(100.0, float((delays > 0).mean() * 100))
+                factors["delay_frequency"] = min(100.0, float((~on_time_mask(delays)).mean() * 100))
                 factors["delay_severity"]  = min(100.0, float(delays.mean() / global_max_delay * 100))
                 # consistency used for display only, not in weighted score
                 delay_mean = float(delays.mean())
@@ -507,7 +508,7 @@ class SupplyChainAnalyzer:
         return {
             "total_cells": total_cells,
             "missing_cells": missing_cells,
-            "completeness_pct": round(float((1.0 - missing_cells / max(total_cells, 1)) * 100.0), 1),
+            "completeness_pct": round(float(completeness_score(df) * 100.0), 1),
             "columns": column_quality,
             "row_count": len(df),
             "column_count": len(df.columns),

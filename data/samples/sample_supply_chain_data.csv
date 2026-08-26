@@ -7,8 +7,8 @@ Swift Source,SKU-201,WH-South,Region-3,SHP-005,2023-01-05,2023-01-06,1,900.00,32
 Apex Supply,SKU-101,WH-East,Region-1,SHP-006,2023-01-06,2023-01-20,14,2500.00,400,Electronics,45.0
 Global Logistics,SKU-102,WH-North,Region-4,SHP-007,2023-01-07,2023-01-10,3,1300.00,480,Electronics,94.0
 Swift Source,SKU-202,WH-South,Region-2,SHP-008,2023-01-08,2023-01-10,2,820.00,310,Textiles,91.0
-Horizon Parts,SKU-300,WH-West,Region-5,SHP-009,2023-01-09,2023-01-11,2,3000.00,100,Machinery,98.0
-Horizon Parts,SKU-301,WH-West,Region-5,SHP-010,2023-01-10,2023-01-25,15,5500.00,110,Machinery,60.0
+Horizon Parts,SKU-300,WH-North,Region-1,SHP-009,2023-01-09,2023-01-11,2,3000.00,100,Machinery,98.0
+Horizon Parts,SKU-301,WH-South,Region-2,SHP-010,2023-01-10,2023-01-25,15,5500.00,110,Machinery,60.0
 Global Logistics,SKU-100,WH-North,Region-1,SHP-011,2023-01-11,2023-01-14,3,1250.00,510,Electronics,93.0
 Swift Source,SKU-200,WH-South,Region-2,SHP-012,2023-01-12,2023-01-13,1,860.00,290,Textiles,87.0
 Apex Supply,SKU-100,WH-North,Region-1,SHP-013,2023-01-13,2023-01-18,5,1450.00,460,Electronics,75.0
@@ -17,5 +17,5 @@ Swift Source,SKU-201,WH-South,Region-3,SHP-015,2023-01-15,2023-01-16,1,910.00,33
 Apex Supply,SKU-101,WH-East,Region-1,SHP-016,2023-01-16,2023-01-30,14,2600.00,410,Electronics,40.0
 Global Logistics,SKU-102,WH-North,Region-4,SHP-017,2023-01-17,2023-01-20,3,1320.00,490,Electronics,95.0
 Swift Source,SKU-202,WH-South,Region-2,SHP-018,2023-01-18,2023-01-20,2,830.00,320,Textiles,92.0
-Horizon Parts,SKU-300,WH-West,Region-5,SHP-019,2023-01-19,2023-01-21,2,3100.00,120,Machinery,99.0
-Horizon Parts,SKU-301,WH-West,Region-5,SHP-020,2023-01-20,2023-02-05,16,5600.00,130,Machinery,55.0
+Horizon Parts,SKU-300,WH-North,Region-1,SHP-019,2023-01-19,2023-01-21,2,3100.00,120,Machinery,99.0
+Horizon Parts,SKU-301,WH-South,Region-2,SHP-020,2023-01-20,2023-02-05,16,5600.00,130,Machinery,55.0

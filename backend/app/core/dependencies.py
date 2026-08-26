@@ -63,7 +63,8 @@ async def get_db_for_tenant(tenant_id: str, db: Session = Depends(get_db)):
 
 # ── Auth dependency ──
 
-_ALLOW_DEMO = os.getenv("ALLOW_DEMO", "true").lower() == "true"
+def _allow_demo() -> bool:
+    return os.getenv("ALLOW_DEMO", "true").lower() == "true"
 
 
 async def require_auth(authorization: Optional[str] = Header(None)) -> dict:
@@ -79,7 +80,7 @@ async def require_auth(authorization: Optional[str] = Header(None)) -> dict:
     Production: set ALLOW_DEMO=false in your environment to disable entirely.
     """
     if not authorization:
-        if _ALLOW_DEMO:
+        if _allow_demo():
             return {"sub": "demo@nexus.ai", "role": "viewer", "uid": 0, "demo": True}
         raise HTTPException(status_code=401, detail="Missing Authorization header")
 
@@ -89,7 +90,7 @@ async def require_auth(authorization: Optional[str] = Header(None)) -> dict:
         token = authorization[7:]
 
     if not token or token == "undefined" or token == "null":
-        if _ALLOW_DEMO:
+        if _allow_demo():
             return {"sub": "demo@nexus.ai", "role": "viewer", "uid": 0, "demo": True}
         raise HTTPException(status_code=401, detail="Invalid token")
 

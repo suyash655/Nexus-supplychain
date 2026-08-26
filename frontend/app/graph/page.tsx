@@ -6,6 +6,9 @@ import Sidebar from "../components/layout/Sidebar";
 import TopNav from "../components/layout/TopNav";
 import { Network, AlertTriangle, Zap, GitBranch, ZoomIn, ZoomOut, Maximize2, Search, Filter } from "lucide-react";
 import { apiFetch, apiPostJSON } from "@/lib/api";
+import {
+  DEMO_GRAPH, DEMO_GRAPH_SUMMARY, DEMO_GRAPH_CENTRALITY,
+} from "../demo-data";
 
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), { ssr: false });
 
@@ -53,6 +56,8 @@ export default function GraphPage() {
     const [cascadeResult, setCascadeResult] = useState<Record<string, unknown> | null>(null);
     const [cascadeInput, setCascadeInput] = useState("");
     const [loading, setLoading] = useState(true);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [isDemoData, setIsDemoData] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [simulatingFailure, setSimulatingFailure] = useState(false);
     const [simulatedFailureResult, setSimulatedFailureResult] = useState<any>(null);
@@ -63,6 +68,7 @@ export default function GraphPage() {
     const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set(["supplier", "sku", "warehouse", "region"]));
     const [maxNodes, setMaxNodes] = useState(100);
     const graphRef = useRef<unknown>(null);
+    const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
     // Centrality lookup for node sizing
     const centralityMap = useMemo(() => {
@@ -98,59 +104,123 @@ export default function GraphPage() {
         return { nodes: filteredNodes, links: filteredLinks };
     }, [graphData, activeFilters, searchQuery, maxNodes, centralityMap]);
 
+    /** Apply a graph visualization payload (nodes/edges) into React state */
+    const applyGraphData = useCallback((rawGraph: any, summary: any, centralities: any, paths: any, demo: boolean) => {
+        setGraphData({
+            nodes: (rawGraph.nodes ?? []).map((n: GraphNode) => ({ ...n })),
+            links: (rawGraph.edges ?? []).map((e: GraphEdge) => ({
+                ...e,
+                source: e.source,
+                target: e.target,
+            })),
+        });
+        setGraphSummary(summary);
+        setCentrality(centralities);
+        setCriticalPaths(Array.isArray(paths) ? paths : (paths?.data ?? []));
+        setIsDemoData(demo);
+    }, []);
+
+    /** Load graph data. Returns true if real data was loaded. */
+    const loadGraph = useCallback(async (): Promise<boolean> => {
+        try {
+            const [gRes, gsRes, cRes, cpRes] = await Promise.all([
+                apiFetch(`/graph/visualization`),
+                apiFetch(`/graph/summary`),
+                apiFetch(`/graph/centrality`),
+                apiFetch(`/graph/critical-paths`),
+            ]);
+
+            if (!gRes.ok) throw new Error(`Graph fetch failed: ${gRes.status}`);
+
+            const rawGraph = await gRes.json();
+            const hasRealNodes = rawGraph?.nodes?.length > 0;
+
+            const [summary, centralities, paths] = await Promise.all([
+                gsRes.ok ? gsRes.json() : Promise.resolve({}),
+                cRes.ok  ? cRes.json()  : Promise.resolve({ degree: [], betweenness: [], pagerank: [] }),
+                cpRes.ok ? cpRes.json() : Promise.resolve([]),
+            ]);
+
+            if (hasRealNodes) {
+                applyGraphData(rawGraph, summary, centralities, paths, false);
+                return true;
+            }
+
+            // No real data yet — fall back to demo graph from backend or local constant
+            let demoGraph = DEMO_GRAPH;
+            try {
+                const demoRes = await apiFetch(`/graph/demo`);
+                if (demoRes.ok) {
+                    const backendDemo = await demoRes.json();
+                    if (backendDemo?.nodes?.length > 0) demoGraph = backendDemo;
+                }
+            } catch { /* use local fallback */ }
+
+            applyGraphData(
+                demoGraph,
+                DEMO_GRAPH_SUMMARY,
+                DEMO_GRAPH_CENTRALITY,
+                [],
+                true,
+            );
+            return false;
+        } catch (e: unknown) {
+            // Backend unreachable — use local demo data
+            applyGraphData(DEMO_GRAPH, DEMO_GRAPH_SUMMARY, DEMO_GRAPH_CENTRALITY, [], true);
+            return false;
+        }
+    }, [applyGraphData]);
+
     useEffect(() => {
-        async function load() {
+        let cancelled = false;
+
+        async function init() {
             setLoading(true);
             setError(null);
-            try {
-                const [gRes, gsRes, cRes, cpRes] = await Promise.all([
-                    apiFetch(`/graph/visualization`),
-                    apiFetch(`/graph/summary`),
-                    apiFetch(`/graph/centrality`),
-                    apiFetch(`/graph/critical-paths`),
-                ]);
 
-                if (!gRes.ok) throw new Error(`Graph data fetch failed: ${gRes.status}`);
+            const gotRealData = await loadGraph();
+            if (cancelled) return;
+            setLoading(false);
 
-                let rawGraph = await gRes.json();
-                
-                // If real graph is empty, fetch fallback demo graph
-                if (!rawGraph || !rawGraph.nodes || rawGraph.nodes.length === 0) {
-                    try {
-                        const demoRes = await apiFetch(`/graph/demo`);
-                        if (demoRes.ok) {
-                            rawGraph = await demoRes.json();
+            if (!gotRealData) {
+                // Check if analysis is currently running — if so, poll until it finishes
+                try {
+                    const statusRes = await apiFetch(`/graph/status`);
+                    if (statusRes.ok) {
+                        const status = await statusRes.json();
+                        if (status.is_analyzing) {
+                            setIsAnalyzing(true);
+                            // Poll every 5 seconds until real graph data appears
+                            pollRef.current = setInterval(async () => {
+                                if (cancelled) { clearInterval(pollRef.current!); return; }
+                                try {
+                                    const s = await apiFetch(`/graph/status`);
+                                    if (!s.ok) return;
+                                    const st = await s.json();
+                                    if (st.has_real_data) {
+                                        clearInterval(pollRef.current!);
+                                        setIsAnalyzing(false);
+                                        await loadGraph();
+                                    } else if (!st.is_analyzing) {
+                                        // Analysis finished but no graph data — stop polling
+                                        clearInterval(pollRef.current!);
+                                        setIsAnalyzing(false);
+                                    }
+                                } catch { /* keep polling */ }
+                            }, 5000);
                         }
-                    } catch (e) {
-                        console.error("Failed to load demo graph", e);
                     }
-                }
-
-                const summary = await gsRes.json();
-                const centralities = await cRes.json();
-                const paths = await cpRes.json();
-
-                setGraphData({
-                    nodes: (rawGraph.nodes ?? []).map((n: GraphNode) => ({ ...n })),
-                    links: (rawGraph.edges ?? []).map((e: GraphEdge) => ({
-                        ...e,
-                        source: e.source,
-                        target: e.target,
-                    })),
-                });
-                setGraphSummary(summary);
-                setCentrality(centralities);
-                setCriticalPaths(Array.isArray(paths) ? paths : (paths.data ?? []));
-            } catch (e: unknown) {
-                const msg = e instanceof Error ? e.message : String(e);
-                setError(msg);
-                console.error(e);
-            } finally {
-                setLoading(false);
+                } catch { /* ignore status check failures */ }
             }
         }
-        load();
-    }, []);
+
+        init();
+
+        return () => {
+            cancelled = true;
+            if (pollRef.current) clearInterval(pollRef.current);
+        };
+    }, [loadGraph]);
 
     const handleNodeClick = useCallback((node: ForceNode) => {
         setSelectedNode(node);
@@ -327,6 +397,26 @@ export default function GraphPage() {
                         <div style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", borderRadius: 10, padding: 16, marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
                             <AlertTriangle size={18} color="#ef4444" />
                             <span style={{ color: "#ef4444", fontSize: 13 }}>No graph data. Upload a dataset first. ({error})</span>
+                        </div>
+                    )}
+
+                    {/* Analyzing banner — shown while analysis pipeline runs after upload */}
+                    {isAnalyzing && (
+                        <div style={{ background: "rgba(56, 189, 248, 0.08)", border: "1px solid rgba(56, 189, 248, 0.25)", borderRadius: 10, padding: 16, marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
+                            <div style={{ width: 14, height: 14, border: "2px solid #38bdf8", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite", flexShrink: 0 }} />
+                            <span style={{ color: "#38bdf8", fontSize: 13 }}>
+                                Analysis pipeline running — graph will update automatically when complete (~60s)
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Demo data banner */}
+                    {isDemoData && !isAnalyzing && (
+                        <div style={{ background: "rgba(168, 85, 247, 0.08)", border: "1px solid rgba(168, 85, 247, 0.25)", borderRadius: 10, padding: "10px 16px", marginBottom: 20, display: "flex", gap: 10, alignItems: "center" }}>
+                            <Zap size={14} color="#a855f7" style={{ flexShrink: 0 }} />
+                            <span style={{ color: "#a855f7", fontSize: 13 }}>
+                                Showing demo network — <a href="/upload" style={{ color: "#c084fc", fontWeight: 600, textDecoration: "none" }}>upload your data</a> to visualize your real supply chain graph
+                            </span>
                         </div>
                     )}
 

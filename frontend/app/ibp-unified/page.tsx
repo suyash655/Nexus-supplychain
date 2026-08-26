@@ -40,6 +40,7 @@ export default function IBPUnifiedPage() {
   const templates = overview?.process_templates ?? {};
   const selectedTemplate = templates[templateId] ?? Object.values(templates)[0];
   const sourcesLabel = useMemo(() => (overview?.data_flow.sources ?? []).slice(0, 3).join(", ") || "No sources connected", [overview]);
+  const displaySteps = runResult?.steps ?? selectedTemplate?.steps.map((step) => ({ step, status: "not_started" })) ?? [];
 
   const runFlow = async () => {
     setRunningFlow(true);
@@ -122,11 +123,11 @@ export default function IBPUnifiedPage() {
               <div style={{ background: "var(--color-surface)", border: "1px solid var(--color-border)", borderRadius: 6, padding: 20 }}>
                 <SectionLabel>{selectedTemplate?.name ?? "Template Flow"}</SectionLabel>
                 <div style={{ display: "grid", gap: 10, marginTop: 14 }}>
-                  {(runResult?.steps ?? selectedTemplate?.steps.map((step) => ({ step, status: "ready" })) ?? []).map((step, index) => (
+                  {displaySteps.map((step, index) => (
                     <div key={step.step} style={{ display: "flex", alignItems: "center", gap: 10, padding: 12, border: "1px solid var(--color-border)", borderRadius: 4 }}>
-                      <GitBranch size={14} color={step.status === "completed" ? "#10B981" : "#6B7280"} />
+                      <GitBranch size={14} color={step.status === "completed" ? "#10B981" : step.status === "not_started" ? "#9CA3AF" : "#6B7280"} />
                       <span style={{ flex: 1, fontSize: 13, color: "var(--color-text-1)" }}>{index + 1}. {step.step.replaceAll("_", " ")}</span>
-                      <span style={{ fontSize: 11, color: "var(--color-text-3)" }}>{step.status}</span>
+                      <span style={{ fontSize: 11, color: step.status === "not_started" ? "#9CA3AF" : "var(--color-text-3)" }}>{step.status === "not_started" ? "not run" : step.status}</span>
                     </div>
                   ))}
                 </div>

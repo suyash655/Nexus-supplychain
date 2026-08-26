@@ -49,7 +49,7 @@ export function NexusChat() {
         {messages.length === 0 && (
           <div className="nexus-chat-empty">
             <div className="nexus-chat-empty-title">Ask anything about your supply chain.</div>
-            <div className="nexus-chat-empty-subtitle">Powered by BCI + RAG</div>
+            <div className="nexus-chat-empty-subtitle">Powered by offline-safe supply chain context</div>
           </div>
         )}
         {messages.map((m, i) => (

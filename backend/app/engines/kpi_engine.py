@@ -62,7 +62,7 @@ class KPIEngine:
             anomaly_count = anomalies.get("anomaly_count", 0)
 
         from app.core.database import SessionLocal
-        from app.models.supply import AgentTrace
+        from app.models.agent_actions import AgentTrace
         db = SessionLocal()
         try:
             traces = db.query(AgentTrace).limit(100).all()
@@ -308,23 +308,23 @@ class KPIEngine:
         scores: List[float] = []
 
         # MTTD contribution (lower is better)
-        mttd = metrics.get("mttd", {}).get("value", 60)
+        mttd = metrics.get("mttd", {}).get("value") or 60
         scores.append(max(0, 100 - mttd))  # 0s = 100, 100s = 0
 
         # MTTR contribution (lower is better)
-        mttr = metrics.get("mttr", {}).get("value", 30)
+        mttr = metrics.get("mttr", {}).get("value") or 30
         scores.append(max(0, 100 - mttr * 2))
 
         # RAR contribution (higher is better)
-        rar = metrics.get("rar", {}).get("value", 50)
+        rar = metrics.get("rar", {}).get("value") if metrics.get("rar", {}).get("value") is not None else 50
         scores.append(rar)
 
         # FPR contribution (lower is better)
-        fpr = metrics.get("fpr", {}).get("value", 20)
+        fpr = metrics.get("fpr", {}).get("value") if metrics.get("fpr", {}).get("value") is not None else 20
         scores.append(max(0, 100 - fpr * 2))
 
         # TCD contribution (higher is better)
-        tcd = metrics.get("tcd", {}).get("value", 50)
+        tcd = metrics.get("tcd", {}).get("value") if metrics.get("tcd", {}).get("value") is not None else 50
         scores.append(tcd)
 
         composite = round(float(np.mean(scores)), 1) if scores else 50.0

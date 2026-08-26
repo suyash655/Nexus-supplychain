@@ -15,6 +15,7 @@ from sqlalchemy import Column, Integer, String, DateTime, JSON, Float, Text, Boo
 from sqlalchemy.orm import Session  # type: ignore
 
 from app.models import Base  # type: ignore
+from app.utils.supply_metrics import completeness_detail, completeness_score
 
 
 def _utcnow():
@@ -84,12 +85,12 @@ class DataQualityEngine:
         scores: List[float] = []
 
         # 1. Completeness — % of non-null values
-        completeness = 1.0 - (df.isnull().sum().sum() / (len(df) * len(df.columns))) if len(df) > 0 else 0
+        completeness = completeness_score(df)
         scores.append(completeness)
         report["checks"].append({
             "name": "Completeness",
             "score": round(float(completeness), 4),
-            "detail": {col: round(float(1.0 - df[col].isnull().mean()), 4) for col in df.columns},
+            "detail": completeness_detail(df),
             "status": "pass" if completeness > 0.9 else "warn" if completeness > 0.7 else "fail",
         })
 

@@ -62,7 +62,8 @@ export default function XAIPage() {
             <div className="main-wrapper">
             <TopNav />
             <main className="main-content">
-                {error && (
+                {/* Only show red error if it's a real server error, not just "no data yet" */}
+                {error && importance === null && (
                     <div className="card" style={{ marginBottom: 20, padding: 16, color: "#ef4444", border: "1px solid rgba(239,68,68,0.35)" }}>
                         {error}
                     </div>
@@ -73,7 +74,7 @@ export default function XAIPage() {
                         Explainable AI (XAI)
                     </h1>
                     <p style={{ color: "var(--text-secondary)", fontSize: 13 }}>
-                        Understand why the AI makes its predictions — feature importance, counterfactuals, and causal reasoning
+                        Understand predictive feature importance, counterfactuals, and operational associations
                     </p>
                 </div>
 

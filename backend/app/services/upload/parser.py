@@ -30,12 +30,15 @@ def parse_upload_file(contents: bytes, filename: str, max_bytes: int, max_previe
             return pd.read_excel(io.BytesIO(contents), engine="openpyxl", nrows=max_preview_rows)
         else:
             # Try multiple CSV parsing approaches for robustness
-            encodings = ["utf-8-sig", "utf-8", "latin-1", "cp1252", "iso-8859-1"]
+            encodings = ["utf-8-sig", "utf-8", "utf-16", "utf-16-le", "utf-16-be", "latin-1", "cp1252", "iso-8859-1"]
             last_error = None
             
             for encoding in encodings:
                 try:
                     df = pd.read_csv(io.BytesIO(contents), encoding=encoding, nrows=max_preview_rows)
+                    if any(str(col).startswith("��") or "\x00" in str(col) for col in df.columns):
+                        last_error = UnicodeDecodeError(encoding, contents, 0, 1, "decoded to invalid header")
+                        continue
                     if not df.empty:
                         return df
                 except UnicodeDecodeError as e:

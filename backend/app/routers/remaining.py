@@ -1,16 +1,14 @@
 """
-NEXUS — Remaining Routers: XAI, Export, Connectors, Pipeline, Causal, Agents, Contracts, Scheduler, System
+NEXUS — Remaining Routers: Pipeline, Risk Propagation, Scheduler, System
 ===========================================================================================================
 Groups the remaining smaller route domains to avoid an explosion of tiny files.
 """
 
-import io
 import json
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 
-from fastapi import APIRouter, UploadFile, File, Form, Query, Depends, HTTPException  # type: ignore
-from fastapi.responses import StreamingResponse  # type: ignore
+from fastapi import APIRouter, Query, Depends, HTTPException  # type: ignore
 from pydantic import BaseModel, Field  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 
@@ -45,64 +43,6 @@ class JobUpdateRequest(BaseModel):
     name: Optional[str] = Field(None, max_length=200)
     schedule: Optional[str] = Field(None, max_length=100)
     connector_config: Optional[Dict[str, Any]] = None
-
-
-# ============================================================
-
-# ============================================================
-# CONNECTORS
-# ============================================================
-
-connectors_router = APIRouter(prefix="/connectors", tags=["Connectors"])
-
-
-@connectors_router.get("/types")
-def list_connector_types():
-    from app.core.config import settings  # type: ignore
-    return {"types": settings.CONNECTOR_TYPES}
-
-
-@connectors_router.get("")
-def list_connectors(db: Session = Depends(get_db)):
-    from app.connectors import ConnectorConfig, get_connector  # type: ignore
-    connectors = db.query(ConnectorConfig).all()
-    return {"connectors": [
-        {"id": c.id, "name": c.name, "type": c.connector_type, "active": c.is_active,
-         "last_sync": c.last_sync_at.isoformat() if c.last_sync_at else None,
-         "last_status": c.last_sync_status, "last_rows": c.last_sync_rows}
-        for c in connectors
-    ]}
-
-
-@connectors_router.post("")
-def create_connector(
-    name: str = Form(...), connector_type: str = Form(...),
-    config_json: str = Form("{}"), schedule: str = Form("manual"),
-    db: Session = Depends(get_db),
-):
-    from app.connectors import ConnectorConfig  # type: ignore
-    import json as _json
-    conn = ConnectorConfig(
-        name=name, connector_type=connector_type,
-        config_json=_json.loads(config_json), schedule=schedule,
-    )
-    db.add(conn)
-    db.commit()
-    db.refresh(conn)
-    return {"id": conn.id, "name": conn.name, "type": conn.connector_type, "status": "created"}
-
-
-@connectors_router.post("/{connector_id}/test")
-def test_connector(connector_id: int, db: Session = Depends(get_db)):
-    from app.connectors import ConnectorConfig, get_connector  # type: ignore
-    conn = db.query(ConnectorConfig).filter(ConnectorConfig.id == connector_id).first()
-    if not conn:
-        raise HTTPException(status_code=404, detail="Connector not found")
-    try:
-        connector = get_connector(conn.connector_type, conn.config_json or {})
-        return connector.test_connection()
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
 
 
 # ============================================================

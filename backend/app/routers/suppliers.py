@@ -44,14 +44,14 @@ async def get_subtier_suppliers(
         - data_source: Where the relationship was discovered
         - products: Products supplied
     """
-    # Get the TGNN engine from the app engines singleton
+    # Get the temporal trend engine from the app engines singleton.
     from app.main import engines  # type: ignore
 
     tgnn = engines.tgnn_engine_instance
     if tgnn is None:
         # Return mock data even if engine is not initialised
         # This ensures the API contract is stable regardless of engine state
-        logger.warning("TGNN engine not available, returning minimal mock data")
+        logger.warning("Temporal trend engine not available, returning minimal mock data")
         return {
             "supplier_id": supplier_id,
             "subtier_count": 0,

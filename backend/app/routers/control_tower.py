@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.core.dependencies import get_db, require_auth
 from app.engines.control_tower import ControlTowerEngine
 from app.core.orchestrator import _load_dataframe
+from app.utils.supply_metrics import ON_TIME_DELAY_TOLERANCE_DAYS, on_time_mask
 
 logger_ct = logging.getLogger("nexus.control_tower")
 
@@ -391,44 +392,67 @@ def get_performance_metrics(
         
         # OTIF Rate
         if "delay_days" in df.columns:
-            on_time = len(df[df["delay_days"] <= 0])
             total = len(df)
+            on_time = int(on_time_mask(df["delay_days"]).sum())
             otif = (on_time / total * 100) if total > 0 else 0
             metrics.append({
                 "metric": "OTIF Rate",
                 "current": round(otif, 1),
                 "target": 95.0,
                 "trend": "stable",
-                "period": "Current Week"
+                "period": f"Current Week (<= {ON_TIME_DELAY_TOLERANCE_DAYS} day late)"
             })
         
-        # Forecast accuracy (simplified)
-        metrics.append({
-            "metric": "Forecast Accuracy",
-            "current": 87.5,
-            "target": 90.0,
-            "trend": "stable",
-            "period": "Current Month"
-        })
+        if {"actual_demand", "forecast_demand"}.issubset(df.columns):
+            actual = pd.to_numeric(df["actual_demand"], errors="coerce")
+            forecast = pd.to_numeric(df["forecast_demand"], errors="coerce")
+            valid = actual.notna() & forecast.notna() & (actual != 0)
+            if valid.any():
+                mape = ((actual[valid] - forecast[valid]).abs() / actual[valid]).mean() * 100
+                metrics.append({
+                    "metric": "Forecast Accuracy",
+                    "current": round(max(0.0, 100.0 - float(mape)), 1),
+                    "target": 90.0,
+                    "trend": "stable",
+                    "period": "Current Month"
+                })
+        else:
+            metrics.append({
+                "metric": "Forecast Accuracy",
+                "current": None,
+                "target": 90.0,
+                "trend": "unavailable",
+                "period": "Not yet available"
+            })
         
-        # Inventory turnover (simplified)
-        metrics.append({
-            "metric": "Inventory Turnover",
-            "current": 4.2,
-            "target": 4.5,
-            "trend": "up",
-            "period": "Current Quarter"
-        })
+        if {"cost_of_goods_sold", "average_inventory_value"}.issubset(df.columns):
+            cogs = pd.to_numeric(df["cost_of_goods_sold"], errors="coerce").sum()
+            avg_inventory = pd.to_numeric(df["average_inventory_value"], errors="coerce").mean()
+            metrics.append({
+                "metric": "Inventory Turnover",
+                "current": round(float(cogs / avg_inventory), 1) if avg_inventory else None,
+                "target": 4.5,
+                "trend": "stable",
+                "period": "Current Quarter"
+            })
+        else:
+            metrics.append({
+                "metric": "Inventory Turnover",
+                "current": None,
+                "target": 4.5,
+                "trend": "unavailable",
+                "period": "Not yet available"
+            })
         
         # Supplier on-time
         if "delay_days" in df.columns:
-            supplier_on_time = (len(df[df["delay_days"] <= 0]) / len(df) * 100) if len(df) > 0 else 0
+            supplier_on_time = (int(on_time_mask(df["delay_days"]).sum()) / len(df) * 100) if len(df) > 0 else 0
             metrics.append({
                 "metric": "Supplier On-Time",
                 "current": round(supplier_on_time, 1),
                 "target": 93.0,
                 "trend": "down",
-                "period": "Current Week"
+                "period": f"Current Week (<= {ON_TIME_DELAY_TOLERANCE_DAYS} day late)"
             })
         
         return metrics
