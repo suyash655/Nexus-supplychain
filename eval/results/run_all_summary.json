@@ -1,0 +1,162 @@
+{
+  "timestamp": "2026-11-18T16:16:09.024129+00:00",
+  "git_commit": "83e485d",
+  "python_version": "3.13.9",
+  "evaluations": {
+    "anomaly_detection": {
+      "Z-score baseline": {
+        "precision_mean": 1.0,
+        "precision_std": 0.0,
+        "recall_mean": 0.5985,
+        "recall_std": 0.0288,
+        "f1_mean": 0.7484,
+        "f1_std": 0.0227
+      },
+      "IQR baseline": {
+        "precision_mean": 0.6443,
+        "precision_std": 0.0343,
+        "recall_mean": 0.6943,
+        "recall_std": 0.0276,
+        "f1_mean": 0.6682,
+        "f1_std": 0.0304
+      },
+      "Isolation Forest (NEXUS)": {
+        "precision_mean": 0.8635,
+        "precision_std": 0.0586,
+        "recall_mean": 0.8633,
+        "recall_std": 0.0174,
+        "f1_mean": 0.8624,
+        "f1_std": 0.0304
+      }
+    },
+    "forecasting": {
+      "Naive baseline": {
+        "smape_mean": 34.22,
+        "smape_std": 1.41,
+        "mae_mean": 1.323,
+        "mae_std": 0.127,
+        "rmse_mean": 1.692,
+        "rmse_std": 0.17
+      },
+      "Seasonal-naive baseline": {
+        "smape_mean": 15.91,
+        "smape_std": 1.74,
+        "mae_mean": 0.633,
+        "mae_std": 0.068,
+        "rmse_mean": 0.809,
+        "rmse_std": 0.096
+      },
+      "Holt-Winters (NEXUS)": {
+        "smape_mean": 16.47,
+        "smape_std": 3.42,
+        "mae_mean": 0.649,
+        "mae_std": 0.112,
+        "rmse_mean": 0.828,
+        "rmse_std": 0.163
+      }
+    },
+    "risk_ranking": {
+      "recall_at_3_mean": 1.0,
+      "recall_at_3_std": 0.0,
+      "recall_at_5_mean": 1.0,
+      "recall_at_5_std": 0.0,
+      "spearman_corr_mean": 0.5482,
+      "spearman_corr_std": 0.096
+    },
+    "agent_reliability": {
+      "total_scenarios": 5,
+      "passed": 5,
+      "pass_rate_pct": 100.0
+    },
+    "performance": [
+      {
+        "rows": 1000,
+        "elapsed_seconds": 2.024,
+        "throughput_rows_sec": 494.0,
+        "peak_memory_mb": 0.75
+      },
+      {
+        "rows": 5000,
+        "elapsed_seconds": 2.726,
+        "throughput_rows_sec": 1834.2,
+        "peak_memory_mb": 1.65
+      },
+      {
+        "rows": 20000,
+        "elapsed_seconds": 6.26,
+        "throughput_rows_sec": 3194.8,
+        "peak_memory_mb": 5.87
+      }
+    ],
+    "loophole_verification": {
+      "status": "PASS",
+      "results_matrix": [
+        {
+          "component": "Risk Scoring",
+          "subsystem": "Critical Bottleneck",
+          "required_expected": "Titan Heavy Logistics rank #1, score >= 70.0, tier='critical'",
+          "obtained": "Rank #1, score=81.5, tier='critical'",
+          "status": "PASS"
+        },
+        {
+          "component": "Risk Scoring",
+          "subsystem": "Elevated Exposure",
+          "required_expected": "Vanguard Assemblies score in [40.0, 70.0), tier='elevated'",
+          "obtained": "Score=43.9, tier='elevated'",
+          "status": "PASS"
+        },
+        {
+          "component": "Risk Scoring",
+          "subsystem": "Stable Fleet Baseline",
+          "required_expected": "10/10 stable suppliers score < 35.0, tier='stable'",
+          "obtained": "10/10 stable (max score: 0.7)",
+          "status": "PASS"
+        },
+        {
+          "component": "Loophole Defense",
+          "subsystem": "Single-row & Zero-variance",
+          "required_expected": "Zero NaN/Inf on 1-row, 0-variance, & special character vendors",
+          "obtained": "Solo=1.5, Const=0.2, Spec=6.0 (all finite)",
+          "status": "PASS"
+        },
+        {
+          "component": "Anomaly Detection",
+          "subsystem": "Isolation Forest Outliers",
+          "required_expected": "Flag >= 80% injected outliers with fleet anomaly rate 0.3%-25.0%",
+          "obtained": "Detected 5/5 injected outliers, fleet rate=19.2%",
+          "status": "PASS"
+        },
+        {
+          "component": "Graph Engine",
+          "subsystem": "Disruption Cascade",
+          "required_expected": "Disabling Titan disconnects sole SKU-CRITICAL-999 (affected >= 2)",
+          "obtained": "Titan affected=3 (SKU-CRITICAL-999 severed), Vendor-01 affected=12",
+          "status": "PASS"
+        },
+        {
+          "component": "Forecasting",
+          "subsystem": "Holt-Winters Extrapolation",
+          "required_expected": "Holt-Winters used; Titan predicted delay > 10d, Vendor-01 <= 1d",
+          "obtained": "Method='holt_winters', Titan p50=37.5d, Vendor-01 p50=0.0d",
+          "status": "PASS"
+        },
+        {
+          "component": "Mitigation Agent",
+          "subsystem": "Plan Schema & Approval Gate",
+          "required_expected": "Valid plan schema; unauthorized roles (viewer/analyst) blocked",
+          "obtained": "Plan action=dual_source, viewer blocked=True, analyst blocked=True",
+          "status": "PASS"
+        },
+        {
+          "component": "SafeJSONResponse",
+          "subsystem": "NaN/Inf Sanitization",
+          "required_expected": "Clean serialization with zero raw NaN/Inf in JSON response",
+          "obtained": "Serialized 61149 bytes, zero NaN/Inf detected",
+          "status": "PASS"
+        }
+      ]
+    }
+  },
+  "status": "success",
+  "total_duration_seconds": 20.28
+}

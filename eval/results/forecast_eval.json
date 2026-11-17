@@ -1,0 +1,81 @@
+{
+  "timestamp": "2026-11-18T16:16:10.724070+00:00",
+  "git_commit": "83e485d",
+  "python_version": "3.13.9",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "holdout_periods": 3,
+  "summary": {
+    "Naive baseline": {
+      "smape_mean": 34.22,
+      "smape_std": 1.41,
+      "mae_mean": 1.323,
+      "mae_std": 0.127,
+      "rmse_mean": 1.692,
+      "rmse_std": 0.17
+    },
+    "Seasonal-naive baseline": {
+      "smape_mean": 15.91,
+      "smape_std": 1.74,
+      "mae_mean": 0.633,
+      "mae_std": 0.068,
+      "rmse_mean": 0.809,
+      "rmse_std": 0.096
+    },
+    "Holt-Winters (NEXUS)": {
+      "smape_mean": 16.47,
+      "smape_std": 3.42,
+      "mae_mean": 0.649,
+      "mae_std": 0.112,
+      "rmse_mean": 0.828,
+      "rmse_std": 0.163
+    }
+  },
+  "per_seed_runs": [
+    {
+      "seed": 0,
+      "n_series": 15,
+      "holdout_periods": 3,
+      "naive_smape": 33.619710699765314,
+      "snaive_smape": 16.913156404895435,
+      "hw_smape": 19.06511626108842
+    },
+    {
+      "seed": 1,
+      "n_series": 15,
+      "holdout_periods": 3,
+      "naive_smape": 36.868665007267204,
+      "snaive_smape": 17.97002098539289,
+      "hw_smape": 21.18332845763699
+    },
+    {
+      "seed": 2,
+      "n_series": 15,
+      "holdout_periods": 3,
+      "naive_smape": 32.651657377162635,
+      "snaive_smape": 16.118317881728455,
+      "hw_smape": 13.094701392144945
+    },
+    {
+      "seed": 3,
+      "n_series": 15,
+      "holdout_periods": 3,
+      "naive_smape": 34.00205840419648,
+      "snaive_smape": 12.765078868938682,
+      "hw_smape": 12.222610401954242
+    },
+    {
+      "seed": 4,
+      "n_series": 15,
+      "holdout_periods": 3,
+      "naive_smape": 33.97589876275926,
+      "snaive_smape": 15.792925128223812,
+      "hw_smape": 16.791517845688457
+    }
+  ]
+}
