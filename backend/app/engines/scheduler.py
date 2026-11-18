@@ -5,14 +5,11 @@ User-configurable automated data pulls on a defined cadence.
 Uses APScheduler for lightweight background scheduling (no Redis/Celery needed).
 """
 
+import logging
 import threading
 import time
-import logging
-from datetime import datetime, timezone, timedelta
-from typing import Dict, List, Any, Optional, Callable
-from collections import defaultdict
-
-import pandas as pd  # type: ignore
+from datetime import datetime, timedelta, timezone
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger("nexus.scheduler")
 
@@ -41,7 +38,7 @@ class SchedulePreset:
 class DataScheduler:
     """
     Lightweight background scheduler for automated data ingestion.
-    
+
     Manages scheduled jobs that pull data from configured connectors,
     run quality checks via PipelineOrchestrator, and load into the database.
     """
@@ -59,7 +56,7 @@ class DataScheduler:
         """Start the background scheduler thread."""
         if self._running:
             return {"status": "already_running"}
-        
+
         self._running = True
         self._thread = threading.Thread(target=self._run_loop, daemon=True, name="nexus-scheduler")
         self._thread.start()
@@ -127,21 +124,21 @@ class DataScheduler:
         with self._lock:
             if job_id not in self._jobs:
                 return {"error": f"Job '{job_id}' not found"}
-            
+
             job = self._jobs[job_id]
-            
+
             if "schedule" in updates:
                 cron = SchedulePreset.ALL.get(updates["schedule"], updates["schedule"])
                 job["schedule_cron"] = cron
                 job["schedule_label"] = updates["schedule"] if updates["schedule"] in SchedulePreset.ALL else "custom"
                 job["next_run_at"] = self._compute_next_run(cron)
-            
+
             if "is_active" in updates:
                 job["is_active"] = bool(updates["is_active"])
-            
+
             if "name" in updates:
                 job["name"] = updates["name"]
-            
+
             if "connector_config" in updates:
                 job["connector_config"].update(updates["connector_config"])
 
@@ -175,7 +172,7 @@ class DataScheduler:
         """List all scheduled jobs with status."""
         with self._lock:
             jobs = [self._sanitize_job(j) for j in self._jobs.values()]
-        
+
         return {
             "total_jobs": len(jobs),
             "active_jobs": len([j for j in jobs if j.get("is_active")]),
@@ -189,13 +186,13 @@ class DataScheduler:
         """Get run history, optionally filtered by job_id."""
         with self._lock:
             history = list(self._history)
-        
+
         if job_id:
             history = [h for h in history if h.get("job_id") == job_id]
-        
+
         # Most recent first
         history.sort(key=lambda h: h.get("started_at", ""), reverse=True)
-        
+
         return {
             "total_runs": len(history),
             "runs": history[:limit],
@@ -208,7 +205,7 @@ class DataScheduler:
             job = self._jobs.get(job_id)
             if not job:
                 return {"error": f"Job '{job_id}' not found"}
-        
+
         return self._execute_job(job)
 
     # ──────────────────────────────────────────────
@@ -259,29 +256,29 @@ class DataScheduler:
         """Execute a single ingestion job."""
         job_id = job["id"]
         started_at = datetime.now(timezone.utc)
-        
+
         logger.info(f"Executing job: {job['name']} ({job_id})")
-        
+
         try:
             # Import connector dynamically to avoid circular imports
             from app.connectors import get_connector  # type: ignore
 
             connector = get_connector(job["connector_type"], job["connector_config"])
-            
+
             # Test connection first
             test_result = connector.test_connection()
             if test_result.get("status") != "ok":
                 raise ConnectionError(f"Connection test failed: {test_result.get('message')}")
-            
+
             # Extract data
             df = connector.extract()
             rows_extracted = len(df)
-            
+
             # Run pipeline callback if provided
             pipeline_result = {}
             if job.get("pipeline_callback"):
                 pipeline_result = job["pipeline_callback"](df)
-            
+
             # Update job state
             with self._lock:
                 if job_id in self._jobs:
@@ -292,16 +289,16 @@ class DataScheduler:
                     self._jobs[job_id]["next_run_at"] = self._compute_next_run(
                         self._jobs[job_id]["schedule_cron"]
                     )
-            
+
             # Record run
             duration_ms = int((datetime.now(timezone.utc) - started_at).total_seconds() * 1000)
-            run_record = self._record_run(
+            self._record_run(
                 job_id, "success",
                 rows=rows_extracted,
                 duration_ms=duration_ms,
                 quality_score=pipeline_result.get("quality_score"),
             )
-            
+
             return {
                 "status": "success",
                 "job_id": job_id,
@@ -318,10 +315,10 @@ class DataScheduler:
                     self._jobs[job_id]["next_run_at"] = self._compute_next_run(
                         self._jobs[job_id]["schedule_cron"]
                     )
-            
+
             duration_ms = int((datetime.now(timezone.utc) - started_at).total_seconds() * 1000)
             self._record_run(job_id, "error", error=str(e), duration_ms=duration_ms)
-            
+
             return {"status": "error", "job_id": job_id, "error": str(e)}
 
     # ──────────────────────────────────────────────
@@ -391,15 +388,15 @@ class DataScheduler:
     def _compute_next_run(self, cron: str) -> str:
         """Compute next run time from a cron expression (simplified parser)."""
         now = datetime.now(timezone.utc)
-        
+
         # Simple cron parsing for common patterns
         parts = cron.strip().split()
         if len(parts) != 5:
             # If not a valid cron, default to 1 hour from now
             return (now + timedelta(hours=1)).isoformat()
-        
+
         minute, hour, dom, month, dow = parts
-        
+
         # Handle simple patterns
         if minute.startswith("*/"):
             interval_min = int(minute[2:])
@@ -407,21 +404,21 @@ class DataScheduler:
             if next_minute >= 60:
                 return (now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)).isoformat()
             return now.replace(minute=next_minute, second=0, microsecond=0).isoformat()
-        
+
         if hour.startswith("*/"):
             interval_hr = int(hour[2:])
             next_hour = ((now.hour // interval_hr) + 1) * interval_hr
             if next_hour >= 24:
                 return (now.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1)).isoformat()
             return now.replace(hour=next_hour, minute=int(minute) if minute.isdigit() else 0, second=0, microsecond=0).isoformat()
-        
+
         # Daily at specific time
         if minute.isdigit() and hour.isdigit() and dom == "*":
             target = now.replace(hour=int(hour), minute=int(minute), second=0, microsecond=0)
             if target <= now:
                 target += timedelta(days=1)
             return target.isoformat()
-        
+
         # Weekly
         if dow.isdigit():
             target_dow = int(dow)
@@ -434,7 +431,7 @@ class DataScheduler:
                 second=0, microsecond=0,
             )
             return target.isoformat()
-        
+
         # Monthly
         if dom.isdigit():
             target = now.replace(
@@ -450,7 +447,7 @@ class DataScheduler:
                 else:
                     target = target.replace(month=target.month + 1)
             return target.isoformat()
-        
+
         # Default: 1 hour from now
         return (now + timedelta(hours=1)).isoformat()
 

@@ -26,12 +26,12 @@ The engine is named TemporalTrendEngine internally; TGNNEngine is kept as
 a backward-compatibility alias for existing call sites.
 """
 
-import math
+from collections import defaultdict
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Tuple
+
 import numpy as np  # type: ignore
 import pandas as pd  # type: ignore
-from typing import Dict, List, Any, Optional, Tuple
-from datetime import datetime, timezone, timedelta
-from collections import defaultdict
 
 
 class TemporalEdge:
@@ -371,11 +371,10 @@ class TemporalTrendEngine:
             if memory.delay_history:
                 avg_delay = float(np.mean(memory.delay_history))
                 delay_std = float(np.std(memory.delay_history)) if len(memory.delay_history) > 1 else 0
-                max_delay = float(np.max(memory.delay_history))
+                float(np.max(memory.delay_history))
             else:
                 avg_delay = 0
                 delay_std = 0
-                max_delay = 0
 
             # Trajectory risk: are delays getting worse?
             trajectory_score = 0.0

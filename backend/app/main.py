@@ -11,25 +11,24 @@ Engine initialisation is deferred to lifespan (not module-level) so that:
   - Unit tests can import this module without triggering heavy __init__ calls
 """
 
+import json
 import logging
 import math
-import json
 import time
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-from typing import Optional
 
+import numpy as np  # type: ignore
+from dotenv import load_dotenv  # type: ignore
 from fastapi import FastAPI, Request  # type: ignore
+from fastapi.encoders import ENCODERS_BY_TYPE
+from fastapi.exceptions import RequestValidationError  # type: ignore
 from fastapi.middleware.cors import CORSMiddleware  # type: ignore
 from fastapi.responses import JSONResponse  # type: ignore
-from fastapi.exceptions import RequestValidationError  # type: ignore
-from starlette.exceptions import HTTPException as StarletteHTTPException  # type: ignore
 from slowapi import _rate_limit_exceeded_handler  # type: ignore
 from slowapi.errors import RateLimitExceeded  # type: ignore
-from dotenv import load_dotenv  # type: ignore
-import numpy as np  # type: ignore
-from fastapi.encoders import ENCODERS_BY_TYPE
+from starlette.exceptions import HTTPException as StarletteHTTPException  # type: ignore
 
 ENCODERS_BY_TYPE[np.integer] = int
 ENCODERS_BY_TYPE[np.floating] = float
@@ -37,17 +36,17 @@ ENCODERS_BY_TYPE[np.ndarray] = lambda x: x.tolist()
 
 load_dotenv()
 
-from app.core.database import engine  # type: ignore
-from app.models import Base  # type: ignore
 from app.core.config import settings  # type: ignore
+from app.core.database import engine  # type: ignore
 from app.core.errors import (  # type: ignore
     NexusError,
-    nexus_error_handler,
     http_exception_handler,
-    validation_exception_handler,
+    nexus_error_handler,
     unhandled_exception_handler,
+    validation_exception_handler,
 )
 from app.middleware.audit import AuditMiddleware  # type: ignore
+from app.models import Base  # type: ignore
 
 # ── Crash loudly if running in production with the default secret ──
 settings.validate()
@@ -66,14 +65,14 @@ class JSONFormatter(logging.Formatter):
             "logger": record.name,
             "message": record.getMessage(),
         }
-        
+
         # Include request_id if it was injected into the log record
         if hasattr(record, "request_id"):
             log_obj["request_id"] = record.request_id
-            
+
         if record.exc_info:
             log_obj["exc_info"] = self.formatException(record.exc_info)
-            
+
         # Extract extra kwargs passed to logger
         for key, value in record.__dict__.items():
             if key not in ["args", "asctime", "created", "exc_info", "exc_text", "filename",
@@ -207,9 +206,7 @@ async def lifespan(app: FastAPI):
     """
     # ── Create DB tables ──
     # Import all models to ensure they're registered with Base.metadata
-    from app.connectors import ConnectorConfig, DataLineage  # type: ignore
-    from app.pipeline import PipelineRun, MetricDefinition  # type: ignore
-    
+
     Base.metadata.create_all(bind=engine)
     logger.info("[NEXUS] Database tables verified/created")
 
@@ -224,16 +221,16 @@ async def lifespan(app: FastAPI):
 
     # ── Initialise engines one by one ──
     # Each is wrapped independently: a bad ESG config cannot kill ML startup.
+    from app.causal import CausalGenomeEngine  # type: ignore
+    from app.engines.ai_copilot import AICopilot  # type: ignore
     from app.engines.analyzer import SupplyChainAnalyzer  # type: ignore
     from app.engines.graph_engine import SupplyChainGraph  # type: ignore
-    from app.engines.ai_copilot import AICopilot  # type: ignore
-    from app.engines.xai_engine import XAIEngine  # type: ignore
-    from app.causal import CausalGenomeEngine  # type: ignore
-    from app.pipeline import DataQualityEngine  # type: ignore
-    from app.engines.monte_carlo import MonteCarloEngine  # type: ignore
     from app.engines.kpi_engine import KPIEngine  # type: ignore
+    from app.engines.monte_carlo import MonteCarloEngine  # type: ignore
     from app.engines.scheduler import DataScheduler  # type: ignore
     from app.engines.tgnn_engine import TGNNEngine  # type: ignore
+    from app.engines.xai_engine import XAIEngine  # type: ignore
+    from app.pipeline import DataQualityEngine  # type: ignore
 
     engines.ml_analyzer       = _init_engine("SupplyChainAnalyzer",  SupplyChainAnalyzer)
     engines.graph_engine      = _init_engine("SupplyChainGraph",      SupplyChainGraph)
@@ -246,8 +243,8 @@ async def lifespan(app: FastAPI):
     engines.tgnn_engine_instance=_init_engine("TGNNEngine",           TGNNEngine)
 
     # SAP IBP Engines
-    from app.engines.sop_engine import SOPEngine  # type: ignore
     from app.engines.response_planning import ResponsePlanningEngine  # type: ignore
+    from app.engines.sop_engine import SOPEngine  # type: ignore
     engines.sop_engine = _init_engine("SOPEngine", SOPEngine)
     engines.response_planning_engine = _init_engine("ResponsePlanningEngine", ResponsePlanningEngine)
 
@@ -339,9 +336,9 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 async def request_logging_middleware(request: Request, call_next):
     request_id = str(uuid.uuid4())
     request.state.request_id = request_id
-    
+
     start_time = time.perf_counter()
-    
+
     try:
         response = await call_next(request)
         status_code = response.status_code
@@ -350,11 +347,11 @@ async def request_logging_middleware(request: Request, call_next):
         raise exc
     finally:
         duration_ms = int((time.perf_counter() - start_time) * 1000)
-        
+
         user_id = "unauthenticated"
         if hasattr(request.state, "user") and request.state.user:
             user_id = str(request.state.user.get("id", "unknown"))
-            
+
         access_logger = logging.getLogger("nexus.access")
         access_logger.info(
             f"{request.method} {request.url.path} {status_code}",
@@ -367,7 +364,7 @@ async def request_logging_middleware(request: Request, call_next):
                 "user_id": user_id,
             }
         )
-        
+
     response.headers["X-Request-ID"] = request_id
     response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
     response.headers["Pragma"] = "no-cache"
@@ -380,44 +377,41 @@ async def request_logging_middleware(request: Request, call_next):
 # ============================================================
 
 from app.core.orchestrator import set_engine_kwargs  # type: ignore
-
+from app.features.analytics.router import router as analytics_router  # type: ignore
+from app.features.auth.router import router as auth_router  # type: ignore
+from app.features.export.router import export_router  # type: ignore
+from app.features.mitigation.router import router as mitigation_router  # type: ignore
+from app.features.planning.inventory.router import router as inventory_optimization_router  # type: ignore
 
 # ============================================================
 # Register Routers
 # ============================================================
-
 from app.features.upload.router import router as upload_router  # type: ignore
-from app.features.analytics.router import router as analytics_router  # type: ignore
-from app.routers.ml import router as ml_router  # type: ignore
-from app.routers.graph import router as graph_router  # type: ignore
-from app.routers.copilot import router as copilot_router  # type: ignore
-from app.features.auth.router import router as auth_router  # type: ignore
-from app.features.mitigation.router import router as mitigation_router  # type: ignore
-from app.routers.events import router as events_router  # type: ignore
-from app.routers.health import router as health_router  # type: ignore
-# from app.routers.rag import router as rag_router  # type: ignore
-from app.routers.suppliers import router as suppliers_router  # type: ignore
+from app.features.xai.router import xai_router  # type: ignore
 from app.routers.analysis import router as analysis_router  # type: ignore
+from app.routers.analytics_reporting import router as analytics_reporting_router  # type: ignore
+from app.routers.batch_operations import router as batch_operations_router  # type: ignore
+from app.routers.connectors import router as enterprise_connectors_router  # type: ignore
+from app.routers.control_tower import router as control_tower_router  # type: ignore
+from app.routers.copilot import router as copilot_router  # type: ignore
+from app.routers.data_management import router as data_management_router  # type: ignore
+from app.routers.events import router as events_router  # type: ignore
+from app.routers.graph import router as graph_router  # type: ignore
+from app.routers.graphql import router as graphql_router  # type: ignore
+from app.routers.health import router as health_router  # type: ignore
+from app.routers.ibp_orchestrator import router as ibp_orchestrator_router  # type: ignore
+from app.routers.ml import router as ml_router  # type: ignore
+from app.routers.monitoring import router as monitoring_router  # type: ignore
 from app.routers.remaining import (  # type: ignore
-    pipeline_router,
     causal_router,
+    pipeline_router,
     scheduler_router,
     system_router,
 )
-from app.features.xai.router import xai_router  # type: ignore
-from app.features.export.router import export_router  # type: ignore
-from app.routers.sop import router as sop_router  # type: ignore
 from app.routers.response_planning import router as response_planning_router  # type: ignore
-from app.routers.graphql import router as graphql_router  # type: ignore
+from app.routers.sop import router as sop_router  # type: ignore
+from app.routers.suppliers import router as suppliers_router  # type: ignore
 from app.routers.websocket import router as websocket_router  # type: ignore
-from app.routers.data_management import router as data_management_router  # type: ignore
-from app.routers.batch_operations import router as batch_operations_router  # type: ignore
-from app.routers.monitoring import router as monitoring_router  # type: ignore
-from app.routers.control_tower import router as control_tower_router  # type: ignore
-from app.features.planning.inventory.router import router as inventory_optimization_router  # type: ignore
-from app.routers.analytics_reporting import router as analytics_reporting_router  # type: ignore
-from app.routers.connectors import router as enterprise_connectors_router  # type: ignore
-from app.routers.ibp_orchestrator import router as ibp_orchestrator_router  # type: ignore
 
 app.include_router(upload_router)
 app.include_router(analytics_router)
@@ -428,7 +422,6 @@ app.include_router(auth_router)
 app.include_router(mitigation_router)
 app.include_router(events_router)
 app.include_router(health_router)
-# app.include_router(rag_router)
 app.include_router(suppliers_router)
 app.include_router(analysis_router)
 app.include_router(enterprise_connectors_router)
