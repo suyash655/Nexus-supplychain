@@ -9,7 +9,7 @@ so a single engine failure never crashes the full pipeline.
 import logging
 import threading
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import pandas as pd  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
@@ -46,12 +46,15 @@ def _get_engine_kwargs() -> Dict[str, Any]:
     return _engine_kwargs_cache
 
 
-def _load_dataframe(max_rows: int = _MAX_ANALYSIS_ROWS) -> pd.DataFrame:
+def _load_dataframe(max_rows: int = _MAX_ANALYSIS_ROWS, db: Optional[Session] = None) -> pd.DataFrame:
     """
     Load the most recent `max_rows` supply records into a DataFrame.
     ORDER BY id DESC + LIMIT keeps RAM bounded regardless of table size.
     """
-    db = SessionLocal()
+    close_db = False
+    if db is None:
+        db = SessionLocal()
+        close_db = True
     try:
         rows = (
             db.query(SupplyData)
@@ -86,7 +89,8 @@ def _load_dataframe(max_rows: int = _MAX_ANALYSIS_ROWS) -> pd.DataFrame:
         logger.exception("[NEXUS] Failed to load dataframe from database")
         return pd.DataFrame()
     finally:
-        db.close()
+        if close_db:
+            db.close()
 
 
 def save_analysis_result(db: Session, analysis_type: str, result: Any) -> None:

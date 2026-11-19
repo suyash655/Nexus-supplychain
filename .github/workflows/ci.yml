@@ -1,4 +1,4 @@
-﻿name: CI
+name: CI
 
 on:
   push:
@@ -47,7 +47,7 @@ jobs:
           LLM_PROVIDER: offline
           ALLOW_DEMO: "true"
           SECRET_KEY: "ci-test-secret-key-not-for-production"
-          DATABASE_URL: "sqlite+aiosqlite:///./ci_test.db"
+          DATABASE_URL: "sqlite:///./ci_test.db"
         run: |
           pytest backend/tests/ -q --tb=short --timeout=60
 
@@ -130,6 +130,6 @@ jobs:
           PYTHONPATH: backend
           LLM_PROVIDER: offline
           SECRET_KEY: "ci-test-secret-key-not-for-production"
-          DATABASE_URL: "sqlite+aiosqlite:///./ci_test.db"
+          DATABASE_URL: "sqlite:///./ci_test.db"
         run: |
           pytest backend/tests/test_agent_security_and_reliability.py -q --tb=short --timeout=60

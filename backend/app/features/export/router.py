@@ -15,7 +15,7 @@ export_router = APIRouter(prefix="/export", tags=["Export"])
 @export_router.get("/csv")
 def export_csv(db: Session = Depends(get_db), user: dict = Depends(require_auth)):
     """Export data as CSV for Tableau."""
-    df = _load_dataframe()
+    df = _load_dataframe(db=db)
     if df.empty:
         raise HTTPException(status_code=404, detail="No data to export")
 
@@ -41,7 +41,7 @@ def export_csv(db: Session = Depends(get_db), user: dict = Depends(require_auth)
 @export_router.get("/json")
 def export_json(db: Session = Depends(get_db), user: dict = Depends(require_auth)):
     """Export analysis results as JSON for Power BI."""
-    df = _load_dataframe()
+    df = _load_dataframe(db=db)
     if df.empty:
         raise HTTPException(status_code=404, detail="No data to export")
 
@@ -126,7 +126,7 @@ def export_executive_memo(
     Export an Executive Risk Memorandum synthesizing overall posture,
     top vulnerable suppliers, detected anomalies, and strategic mitigation directives.
     """
-    df = _load_dataframe()
+    df = _load_dataframe(db=db)
     if df.empty:
         raise HTTPException(status_code=404, detail="No supply chain data available for executive memo")
 
