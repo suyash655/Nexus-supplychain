@@ -38,10 +38,11 @@ safehttpx==0.1.7
 annotated-types==0.7.0
 
 # Testing & linting (CI tooling)
-pytest==9.0.2
-pytest-cov==7.1.0
+pytest==8.3.3
+pytest-cov==6.1.0
 pytest-timeout==2.4.0
 pytest-asyncio==0.24.0
 pytest-mock==3.15.1
 anyio==4.12.1
+aiosqlite==0.21.0
 ruff==0.15.13
