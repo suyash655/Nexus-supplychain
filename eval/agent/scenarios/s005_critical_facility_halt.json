@@ -1,0 +1,12 @@
+{
+  "scenario_id": "s005",
+  "title": "Severe component shortage requiring multi-sourcing split",
+  "supplier": "Delta Precision",
+  "risk_score": 93.0,
+  "metrics": {
+    "avg_delay": 21.0,
+    "defect_rate": 0.12
+  },
+  "expected_action_type": "split_allocation",
+  "expected_urgency": "critical"
+}

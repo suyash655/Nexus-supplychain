@@ -2,7 +2,7 @@
 NEXUS — ML Router
 """
 
-from fastapi import APIRouter, Depends, BackgroundTasks, Query  # type: ignore
+from fastapi import APIRouter, BackgroundTasks, Depends, Query  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 
 from app.core.dependencies import get_db, require_auth  # type: ignore
@@ -59,6 +59,7 @@ def get_full_analysis(db: Session = Depends(get_db), user: dict = Depends(requir
 @router.post("/refresh")
 def refresh_analysis(background_tasks: BackgroundTasks, db: Session = Depends(get_db), user: dict = Depends(require_auth)):
     """Re-run the full ML analysis pipeline."""
-    from app.core.orchestrator import run_full_analysis as _run, _get_engine_kwargs  # type: ignore
+    from app.core.orchestrator import _get_engine_kwargs
+    from app.core.orchestrator import run_full_analysis as _run  # type: ignore
     background_tasks.add_task(_run, **_get_engine_kwargs())
     return {"status": "success", "message": "Analysis refresh started in background."}

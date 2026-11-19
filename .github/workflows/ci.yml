@@ -1,0 +1,135 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+      - main
+      - "polish/**"
+      - "feat/**"
+      - "fix/**"
+      - "release/**"
+  pull_request:
+    branches:
+      - master
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend Lint & Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: "backend/requirements-ci.txt"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements-ci.txt
+
+      - name: Lint with Ruff
+        run: |
+          ruff check backend/app/core/sanitize.py backend/agent/schemas.py backend/agent/observability.py
+
+      - name: Run backend tests
+        env:
+          PYTHONPATH: backend
+          LLM_PROVIDER: offline
+          ALLOW_DEMO: "true"
+          SECRET_KEY: "ci-test-secret-key-not-for-production"
+          DATABASE_URL: "sqlite:///./ci_test.db"
+        run: |
+          pytest backend/tests/ -q --tb=short --timeout=60
+
+  frontend:
+    name: Frontend Lint, Typecheck & Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "frontend/package-lock.json"
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps || npm install --legacy-peer-deps
+
+      - name: TypeScript typecheck
+        run: npx tsc --noEmit
+
+      - name: Unit tests
+        run: npm test -- --passWithNoTests
+
+      - name: Next.js build
+        env:
+          NEXT_PUBLIC_API_URL: "http://localhost:8000"
+          NODE_OPTIONS: "--max-old-space-size=4096"
+        run: npm run build
+
+  security:
+    name: Security & SAST Scans
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install security tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install bandit pip-audit
+
+      - name: Bandit static AST security scan
+        run: |
+          bandit -r backend/app/ -ll -x backend/tests/ || true
+
+      - name: Dependency vulnerability audit
+        continue-on-error: true
+        run: |
+          pip-audit -r backend/requirements-ci.txt
+
+  eval-smoke:
+    name: Agent Reliability & Injection Smoke Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: "backend/requirements-ci.txt"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements-ci.txt
+
+      - name: Run adversarial prompt-injection tests
+        env:
+          PYTHONPATH: backend
+          LLM_PROVIDER: offline
+          SECRET_KEY: "ci-test-secret-key-not-for-production"
+          DATABASE_URL: "sqlite:///./ci_test.db"
+        run: |
+          pytest backend/tests/test_agent_security_and_reliability.py -q --tb=short --timeout=60

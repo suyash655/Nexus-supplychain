@@ -5,8 +5,10 @@ Database models for reports, schedules, subscriptions, and analytics configurati
 """
 
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, DateTime, JSON, Boolean, Text, Float, ForeignKey
+
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
+
 from app.models.base import Base
 
 
@@ -29,7 +31,7 @@ class Report(Base):
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
     is_active = Column(Boolean, default=True)
     is_template = Column(Boolean, default=False)
-    
+
     # Relationships
     schedules = relationship("ReportSchedule", back_populates="report", cascade="all, delete-orphan")
     subscriptions = relationship("ReportSubscription", back_populates="report", cascade="all, delete-orphan")
@@ -51,7 +53,7 @@ class ReportSchedule(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=_utcnow)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
-    
+
     # Relationships
     report = relationship("Report", back_populates="schedules")
 
@@ -71,7 +73,7 @@ class ReportSubscription(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=_utcnow)
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow)
-    
+
     # Relationships
     report = relationship("Report", back_populates="subscriptions")
 
@@ -95,7 +97,7 @@ class ReportExecution(Base):
     output_location = Column(String, nullable=True)
     row_count = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=_utcnow)
-    
+
     # Relationships
     report = relationship("Report", back_populates="executions")
 

@@ -5,9 +5,9 @@ All settings via environment variables with Pydantic validation.
 """
 
 import os
+from datetime import timedelta
 from pathlib import Path
 from typing import Optional
-from datetime import timedelta
 
 # Project root: backend/app/core/config.py → .parents[3] = project root
 _PROJECT_ROOT = Path(__file__).resolve().parents[3]

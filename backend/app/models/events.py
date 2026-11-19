@@ -4,9 +4,11 @@ NEXUS — Supply Chain Event Model
 SQLAlchemy model for real-time supply chain events with tenant isolation.
 """
 
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text  # type: ignore
-from app.models.base import Base, _utcnow
 import uuid
+
+from sqlalchemy import Column, DateTime, Float, Integer, String, Text  # type: ignore
+
+from app.models.base import Base, _utcnow
 
 
 class SupplyChainEvent(Base):

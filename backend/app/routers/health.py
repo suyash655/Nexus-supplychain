@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
-from app.core.dependencies import get_db
 import time
+
+from fastapi import APIRouter, Depends
+from sqlalchemy import text
+
+from app.core.dependencies import get_db
 
 router = APIRouter()
 

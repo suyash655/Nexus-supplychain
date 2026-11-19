@@ -16,7 +16,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query  # type: ignore
+from fastapi import APIRouter, Depends, Query  # type: ignore
 from fastapi.responses import StreamingResponse  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 
