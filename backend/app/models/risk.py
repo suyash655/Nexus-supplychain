@@ -1,6 +1,9 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text
-from app.models.base import Base, _utcnow
 from datetime import datetime, timezone
+
+from sqlalchemy import Column, DateTime, Float, Integer, String, Text
+
+from app.models.base import Base, _utcnow
+
 
 class RiskEvent(Base):
     __tablename__ = "risk_events"

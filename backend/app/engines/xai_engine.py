@@ -21,9 +21,10 @@ What this engine does NOT do:
     than "causes" to reflect this distinction accurately.
 """
 
-import pandas as pd  # type: ignore
+from typing import Any, Dict, List
+
 import numpy as np  # type: ignore
-from typing import Dict, List, Any
+import pandas as pd  # type: ignore
 from sklearn.ensemble import RandomForestRegressor  # type: ignore
 from sklearn.inspection import permutation_importance  # type: ignore
 
@@ -51,8 +52,8 @@ class XAIEngine:
                 numeric_cols.append(col + "_encoded")  # type: ignore[arg-type]
 
         feature_cols = numeric_cols
-        X = df_encoded[feature_cols].fillna(0).values
-        y = pd.to_numeric(df_encoded[target_col], errors="coerce").fillna(0).values
+        X = np.nan_to_num(df_encoded[feature_cols].fillna(0).values, nan=0.0, posinf=0.0, neginf=0.0)
+        y = np.nan_to_num(pd.to_numeric(df_encoded[target_col], errors="coerce").fillna(0).values, nan=0.0, posinf=0.0, neginf=0.0)
 
         if len(X) < 10:
             return {"error": "Insufficient data for importance analysis (need at least 10 rows)"}
@@ -120,7 +121,7 @@ class XAIEngine:
                 new_risk = max(0, risk_score - reduction * 0.3)
                 cf_suggestions.append({
                     "type": "operational",
-                    "change": f"Reduce delay frequency by 30%",
+                    "change": "Reduce delay frequency by 30%",
                     "current_value": round(float(factors["delay_frequency"]), 1),
                     "target_value": round(float(factors["delay_frequency"] * 0.7), 1),
                     "risk_reduction": round(float(risk_score - new_risk), 1),
@@ -132,7 +133,7 @@ class XAIEngine:
                 new_risk = max(0, risk_score - reduction * 0.2)
                 cf_suggestions.append({
                     "type": "operational",
-                    "change": f"Reduce average delivery time by 2 days",
+                    "change": "Reduce average delivery time by 2 days",
                     "current_value": round(float(supplier_data.get("avg_delay", 0)), 1),
                     "target_value": round(float(max(0, supplier_data.get("avg_delay", 0) - 2)), 1),
                     "risk_reduction": round(float(risk_score - new_risk), 1),
@@ -168,18 +169,18 @@ class XAIEngine:
         """Find alternative suppliers for the same SKUs with lower risk scores."""
         if current_supplier not in df["supplier"].values:
             return []
-            
+
         # 1. Identify SKUs supplied by current supplier
         supplier_skus = set(df[df["supplier"] == current_supplier]["sku"].unique())
-        
+
         # 2. Find other suppliers for the same SKUs
         alt_suppliers_df = df[df["sku"].isin(supplier_skus) & (df["supplier"] != current_supplier)]
         potential_alts = set(alt_suppliers_df["supplier"].unique())
-        
+
         # 3. Filter by risk score
         risk_map = {s["supplier"]: s["risk_score"] for s in all_risk_scores}
         current_risk = risk_map.get(current_supplier, 100)
-        
+
         results = []
         for alt in potential_alts:
             alt_risk = risk_map.get(alt, 100)
@@ -188,7 +189,7 @@ class XAIEngine:
                     "supplier": alt,
                     "risk_score": alt_risk,
                 })
-                
+
         return sorted(results, key=lambda x: x["risk_score"])
 
     def _interpret_importance(self, features: List[Dict], target: str) -> str:

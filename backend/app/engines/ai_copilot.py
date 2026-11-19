@@ -5,13 +5,12 @@ AI-driven insights, executive summaries, and natural language querying.
 Supports multiple LLM providers: Groq (free), AWS Bedrock, or offline heuristics.
 """
 
-import os
 import json
-import re
-import httpx  # type: ignore
-from typing import Dict, List, Any, Optional
-from datetime import datetime, timezone
 import logging
+import re
+from typing import Any, Dict, List, Optional
+
+import httpx  # type: ignore
 
 from app.core.config import settings  # type: ignore
 
@@ -230,17 +229,17 @@ class AICopilot:
         if risk_scores and len(risk_scores) > 0:
             top_risk = risk_scores[0]
             defaults.append({
-                "priority": "high", 
-                "action": f"Review {top_risk.get('supplier', 'Top Supplier')}", 
-                "detail": f"Address elevated risk score of {top_risk.get('risk_score', 'unknown')}.", 
+                "priority": "high",
+                "action": f"Review {top_risk.get('supplier', 'Top Supplier')}",
+                "detail": f"Address elevated risk score of {top_risk.get('risk_score', 'unknown')}.",
                 "estimated_impact": "+10% Resilience"
             })
             if len(risk_scores) > 1:
                 second_risk = risk_scores[1]
                 defaults.append({
-                    "priority": "medium", 
-                    "action": f"Diversify {second_risk.get('supplier', 'Supplier')}", 
-                    "detail": "Reduce dependency to mitigate ripple effects.", 
+                    "priority": "medium",
+                    "action": f"Diversify {second_risk.get('supplier', 'Supplier')}",
+                    "detail": "Reduce dependency to mitigate ripple effects.",
                     "estimated_impact": "-15% Risk Exposure"
                 })
         if not defaults:

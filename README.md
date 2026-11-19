@@ -1,377 +1,345 @@
-<div align="center">
+# NEXUS: Supply Chain Risk Intelligence Platform
 
-<img src="https://img.shields.io/badge/NEXUS-Supply%20Chain%20Intelligence-06b6d4?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTIgMkw3IDcgMiAxMmw1IDUgNSA1IDUtNSA1LTUtNS01LTUtNXoiIGZpbGw9IndoaXRlIi8+PC9zdmc+" alt="NEXUS Banner" />
+Upload a supply-chain CSV and get a live supplier graph, anomaly- and forecast-based risk scores, explainable results, and a mitigation agent that waits for human approval before acting.
 
-# NEXUS — Autonomous Supply Chain Intelligence Platform
+[![CI](https://github.com/suyash655/Nexus-supplychain/actions/workflows/ci.yml/badge.svg)](https://github.com/suyash655/Nexus-supplychain/actions)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.129-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs)](https://nextjs.org)
+[![License](https://img.shields.io/badge/License-Research%20%26%20Evaluation-blue)](LICENSE)
 
-*Upload your CSV. Watch the graph build itself. Get AI-driven risk mitigations in seconds.*
-
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.111-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com)
-[![Next.js](https://img.shields.io/badge/Next.js-15-000000?style=flat-square&logo=next.js)](https://nextjs.org)
-[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python)](https://python.org)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript)](https://typescriptlang.org)
-[![LangGraph](https://img.shields.io/badge/LangGraph-Agent-FF6B6B?style=flat-square)](https://github.com/langchain-ai/langgraph)
-[![License](https://img.shields.io/badge/License-Research%20%26%20Evaluation-yellow?style=flat-square)](LICENSE)
-[![CI](https://img.shields.io/github/actions/workflow/status/yourusername/nexus/deploy.yml?style=flat-square&label=CI)](https://github.com/yourusername/nexus/actions)
-
-</div>
+[Watch the demo](docs/DEMO_SCRIPT.md) · 3-minute walkthrough script (see demo script): upload, graph, risk scores, explainability, agent approval.  
+[Demo Screen Capture](docs/assets/demo.gif)  
+Live demo: Run locally with one command (see [Quick start](#quick-start)).
 
 ---
 
-<!-- TODO: Replace with an actual screen recording GIF showing: upload CSV → dashboard populates → graph renders → mitigation agent fires -->
-![NEXUS Demo](https://placehold.co/1200x600/030712/06b6d4?text=NEXUS+Dashboard+Demo+GIF+Here)
-*↑ Replace with a screen recording of the full upload → analysis → graph → mitigation flow*
+## Contents
+
+- [Problem](#problem)
+- [What it does](#what-it-does)
+- [Architecture](#architecture)
+- [How each component works](#how-each-component-works)
+- [Evaluation](#evaluation)
+- [The mitigation agent](#the-mitigation-agent)
+- [Security](#security)
+- [Tech stack and why](#tech-stack-and-why)
+- [Quick start](#quick-start)
+- [Configuration](#configuration)
+- [Project structure](#project-structure)
+- [Design decisions and challenges](#design-decisions-and-challenges)
+- [Limitations](#limitations)
+- [Roadmap](#roadmap)
+- [Claims and where to find them](#claims-and-where-to-find-them)
 
 ---
 
-## The Problem
+## Problem
 
-Supply chain risk is opaque. A delayed shipment from a Tier-2 supplier in Vietnam can cascade into a production halt in Germany — and most teams don't find out until it's too late.
+A delayed shipment from a Tier-2 supplier can cascade into a production halt several steps downstream, and most operational teams find out only after delivery targets are missed. Existing solutions typically either:
+1. Require heavyweight ERP enterprise installations (e.g., SAP, Oracle TMS) that mid-market operations lack, or
+2. Rely on static spreadsheet dashboards that display historical delays without diagnosing systemic bottlenecks or proposing mitigations.
 
-Existing tools either **require expensive ERP integration** (SAP, Oracle) or are **spreadsheet dashboards** that show data without telling you what to *do* about it.
+**Goal of this project:** Go from a raw supply chain CSV to ranked risk scores, explainable drivers, and an approval-gated mitigation plan in under 60 seconds.
 
-**NEXUS is neither.** Drop in a CSV, and within 60 seconds you get:
-- A live network graph of your entire supplier topology
-- ML-ranked risk scores with anomaly detection
-- An AI agent that identifies the highest-risk suppliers and proposes mitigation plans — waiting for your approval before acting
-
----
-
-## ✨ Key Features
-
-- 🧠 **Multi-Engine ML Pipeline** — Isolation Forest anomaly detection, Holt-Winters forecasting, composite risk scoring, and Monte Carlo disruption simulations run automatically after every upload
-- 🕸️ **Live Supply Chain Graph** — NetworkX-powered directed graph with centrality analysis, cascade simulation, and failure impact scoring. Nodes are your suppliers, SKUs, warehouses, and regions — edges are the relationships between them
-- 🤖 **LangGraph Mitigation Agent** — A 6-node stateful agent that detects critical risk, searches past incident context via ChromaDB RAG, finds backup suppliers, runs probabilistic simulations, drafts an LLM action plan, then waits for human approval before executing
-- 📊 **Explainability (XAI)** — SHAP-based feature importance and counterfactual explanations ("reduce Alpha Corp's delay by 3 days and risk drops 18 points")
-- 🔒 **Production-Ready Auth** — JWT with 60-min access tokens, 30-day rotating refresh tokens, bcrypt hashing, RBAC (admin / manager / analyst / viewer), rate limiting, and a full audit trail on every API call
-- 📡 **Real-Time Control Tower** — WebSocket-powered live alert feed with auto-reconnect, incident management, and correlation-based root cause analysis
-- 🌐 **Works Offline** — All ML runs locally. The LLM copilot falls back to deterministic rule-based summaries when no API key is configured. No cloud dependency required for core functionality
+**Who it is for:** A supply chain analyst or operations lead managing multi-tier supplier data in tabular exports who needs automated risk diagnostics and actionable mitigations.
 
 ---
 
-## 🛠️ Tech Stack
+## What it does
 
-| Layer | Technology | Why |
-|---|---|---|
-| **Frontend** | Next.js 15 (App Router) + TypeScript | App Router enables server components for layout; TypeScript catches API shape mismatches at compile time |
-| **UI** | Tailwind CSS + custom design tokens | Dark glassmorphism theme, consistent spacing system via CSS variables |
-| **Charts** | Recharts + react-force-graph-2d | Recharts for analytics charts; D3-backed force graph for the supply chain network |
-| **State** | React `useApi` hook + module-level cache | Custom SWR-style hook with deduplication, TTL, and cache invalidation — no Redux needed |
-| **Backend** | FastAPI (Python 3.11+) | Async request handling, auto-generated OpenAPI docs, Pydantic validation |
-| **ML** | scikit-learn, NetworkX, statsmodels | Isolation Forest, DBSCAN clustering, Holt-Winters; all run in-process, no external services |
-| **AI Agent** | LangGraph + LangChain | Explicit state machine with human-in-the-loop checkpoints; each node is traced and stored |
-| **LLM** | Groq / AWS Bedrock / Offline fallback | Provider-agnostic abstraction — swap keys in `.env` with no code changes |
-| **Vector DB** | ChromaDB | Local RAG over past supply chain incidents for agent context |
-| **Database** | SQLite (dev) / PostgreSQL (prod) | SQLAlchemy ORM; WAL mode for SQLite concurrency; Alembic migrations |
-| **Auth** | PyJWT + bcrypt + slowapi | HS256 tokens, bcrypt cost-12 hashing, IP-based rate limiting on auth endpoints |
-| **DevOps** | Docker + GitHub Actions + AWS CDK | Multi-stage Dockerfiles; CI runs tests → build → Lighthouse → deploy to ECS Fargate |
+- **Multi-engine risk pipeline:** Isolation Forest anomaly detection, Holt-Winters time-series forecasting, multi-factor composite risk scoring, and Monte Carlo disruption simulation running automatically upon CSV upload.
+- **Supplier topology graph:** NetworkX directed graph spanning suppliers, SKUs, warehouses, and regions with degree/betweenness centrality, failure-impact scoring, and cascade simulation.
+- **Explainable diagnostics:** Random Forest permutation feature importance and counterfactual "what-if" simulations ("reduce Alpha Corp delay by 3 days to lower composite risk by 18 points").
+- **Human-in-the-loop mitigation agent:** Stateful LangGraph workflow with ChromaDB RAG retrieval over past incidents. It synthesizes backup alternatives, estimates reroute costs, and stops for human approval before execution.
+- **Live operational control tower:** WebSocket alert feed with auto-reconnect, alert correlation clustering, and root-cause hypothesis generation.
+- **Offline operational fallback:** All machine learning runs locally in-process. The agent copilot operates without external cloud dependencies, degrading gracefully to deterministic heuristic planning when no LLM API key is present.
 
 ---
 
-## 🏗️ Architecture
+## Architecture
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                     BROWSER (Next.js 15)                     │
-│  Upload │ Dashboard │ Graph │ Copilot │ Mitigation │ Reports  │
-└──────────────────┬───────────────────────────────────────────┘
-                   │  REST + WebSocket
-┌──────────────────▼───────────────────────────────────────────┐
-│               FASTAPI BACKEND  :8000                         │
-│                                                              │
-│  Auth · Upload · Analytics · Graph · XAI · Control Tower     │
-│  Mitigation · Planning · Export · Connectors  (+20 more)     │
-│                                                              │
-│  ── Orchestrator ──────────────────────────────────────────  │
-│  On every upload → run_full_analysis() fires 6 engines in    │
-│  sequence, saves JSON blobs to analysis_results table        │
-│                                                              │
-│  ── LangGraph Agent ───────────────────────────────────────  │
-│  assess_risk → rag_context → find_backups → monte_carlo →    │
-│  llm_plan → save_pending  [awaits human approval]            │
-└──────────────────┬───────────────────────────────────────────┘
-                   │  SQLAlchemy ORM
-┌──────────────────▼───────────────────────────────────────────┐
-│  SQLite / PostgreSQL   │   ChromaDB (RAG)                    │
-│  supply_data           │   past incident embeddings          │
-│  analysis_results      │                                     │
-│  agent_traces          │                                     │
-└──────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    U[Browser<br/>Next.js 16] -->|REST + WebSocket| API[FastAPI Backend]
+    API --> ORCH[Orchestrator<br/>run_full_analysis]
+    ORCH --> ENG[ML Engines<br/>Isolation Forest, Holt-Winters,<br/>Composite Risk, NetworkX, XAI]
+    ENG --> DB[(SQLite / PostgreSQL<br/>supply_data, analysis_results)]
+    API --> AG[LangGraph Agent]
+    AG --> VDB[(ChromaDB<br/>Past Incident RAG)]
+    AG --> LLM[LLM Provider<br/>Groq / Bedrock / Offline Heuristic]
+    AG --> DB
+    U -.Reads cached results.-> DB
 ```
 
-**Data flow in one sentence:** A CSV upload atomically replaces `supply_data`, triggers a background ML pipeline that writes results to `analysis_results`, and every dashboard page reads from that cache — so the UI is always fast regardless of data size.
+**Data flow:** When a CSV is uploaded, data is validated and atomically persisted into `supply_data`. The orchestrator triggers an asynchronous pipeline that computes analytics, graph metrics, forecasts, and anomalies, writing cached JSON payloads into `analysis_results`. The frontend immediately displays live database aggregates and polls for analytical completions, ensuring responsive page interactions.
 
-> **Honesty note:** `TGNNEngine` is a temporal trend engine (not a true GNN). `CausalGenomeEngine` is graph-based risk propagation (not Bayesian do-calculus). See [`docs/ML_AI_HONESTY.md`](docs/ML_AI_HONESTY.md) for the complete accuracy log.
+**Agent architecture:**
+```mermaid
+flowchart LR
+    A[get_backup_suppliers] --> B[simulate_reroute_cost]
+    B --> C[retrieve_context]
+    C --> D[draft_action]
+    D --> E[write_pending_action]
+    E --> H{Human Approval Gate}
+    H -->|Approved: node_execute_action| X[Execute Action]
+    H -->|Rejected / Cancelled| Y[Discard / Inactive]
+```
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the detailed system architecture.
 
 ---
 
-## 🚀 Getting Started
+## How each component works
 
-### Prerequisites
+| Component | Method | Input | Output | Known limits |
+| :--- | :--- | :--- | :--- | :--- |
+| **Anomaly detection** | Isolation Forest + Z-score + IQR | Numeric shipment features (delay, cost, quality) | Outlier flags, severity, anomaly scores | Heuristic contamination rate (`0.05`); requires $\ge 10$ samples |
+| **Forecasting** | Holt-Winters Additive Smoothing | Historical delay and cost time series | Multi-step forecast with P10/P90 intervals | Needs sufficient history ($\ge 8$ points for Holt-Winters; falls back to Holt linear trend) |
+| **Risk scoring** | Weighted composite scoring | Delay frequency/severity, cost variance, quality | 0–100 supplier risk score & confidence margin | Weights are heuristic; confidence intervals widen on small $N$ ($<10$ shipments) |
+| **Graph analysis** | NetworkX directed topology | Extracted supplier $\rightarrow$ SKU $\rightarrow$ warehouse edges | Degree/betweenness centrality, cascade paths | Static topological graph; edge weights reflect historical averages |
+| **Explainability** | Random Forest Permutation Importance | Encoded shipment records & target metric | Predictive feature rankings and counterfactual deltas | Permutation importance reflects predictive correlation, not causal mechanisms |
+| **Temporal trends (`TGNNEngine`)** | Windowed regression & Holt trend | Timestamped edge interactions | Trajectory-adjusted risk and trend direction | Classical statistical trend tracking; not a Graph Neural Network |
+| **Risk propagation (`CausalGenomeEngine`)** | BFS exposure diffusion | Structural graph & node risk scores | Downstream accumulated exposure scores | Graph diffusion heuristic; not Bayesian causal DAG inference |
 
-| Tool | Version | Check |
+> For a detailed audit of naming and capabilities, see [docs/ML_AI_HONESTY.md](docs/ML_AI_HONESTY.md).
+
+---
+
+## Evaluation
+
+<!-- EVAL:START -->
+All metrics below are measured from reproducible benchmarks run against real project engines across 5 fixed random seeds. To reproduce: `python -m eval.run_all`.
+
+### 1. Anomaly Detection Accuracy
+Evaluated against synthetic supply chain datasets with injected multi-modal disruptions (delay spikes, cost surges, defect bursts, level shifts) across 5 independent random seeds ($N=1,800$ transactions per seed).
+
+| Detection Method | Precision | Recall | F1 Score | Notes |
+|---|---|---|---|---|
+| **Z-score baseline** | 1.000 ± 0.000 | 0.599 ± 0.029 | **0.748 ± 0.023** | High false negatives on compound anomalies |
+| **IQR baseline** | 0.644 ± 0.034 | 0.694 ± 0.028 | **0.668 ± 0.030** | High false positive rate on skewed costs |
+| **Isolation Forest (NEXUS)** | 0.864 ± 0.059 | 0.863 ± 0.017 | **0.862 ± 0.030** | Multi-feature Isolation Forest ensemble |
+
+### 2. Time Series Forecasting Accuracy
+Evaluated on monthly average delivery delays with quarterly seasonality over a held-out test window of the final 3 periods across 5 random seeds ($N=15$ suppliers per seed).
+
+| Forecasting Method | sMAPE (%) | MAE (days) | RMSE (days) | Approach |
+|---|---|---|---|---|
+| **Naive baseline** | 34.2% ± 1.4% | 1.32 ± 0.13 | 1.69 ± 0.17 | Carries last observed period forward |
+| **Seasonal-naive baseline** | 15.9% ± 1.7% | 0.63 ± 0.07 | 0.81 ± 0.10 | Carries same quarter from previous year |
+| **Holt-Winters (NEXUS)** | 16.5% ± 3.4% | 0.65 ± 0.11 | 0.83 ± 0.16 | Grid-searched additive Holt-Winters with P10/P90 intervals |
+
+### 3. Risk Ranking & Prioritization
+Evaluated on synthetic supply networks containing 5 planted high-risk suppliers of varying severity alongside 15 normal suppliers across 5 random seeds.
+
+| Metric | Measured Result | Ideal Target | Description |
+|---|---|---|---|
+| **Recall@3** | 1.000 ± 0.000 | 1.000 | Top 3 predicted suppliers are true high-risk |
+| **Recall@5** | 1.000 ± 0.000 | 1.000 | All 5 planted critical suppliers captured in top 5 |
+| **Spearman Rank Corr (ρ)** | 0.548 ± 0.096 | > 0.850 | Rank order correlation across entire supplier population |
+
+### 4. Mitigation Agent Safety & Reliability
+Evaluated across 5 operational and adversarial scenarios testing schema compliance, prompt injection resistance, tool isolation, and server-side approval enforcement.
+
+| Metric | Result | Benchmark Criteria |
 |---|---|---|
-| Python | 3.11+ | `python --version` |
-| Node.js | 18+ | `node --version` |
-| npm | 9+ | `npm --version` |
-| Git | any | `git --version` |
+| **Scenario Pass Rate** | **100.0%** (5/5) | Strict pass/fail across all schema and security assertions |
+| **Schema Conformance** | 100% | Output validates against `MitigationPlan` Pydantic model |
+| **Adversarial Injection Defense** | 100% | Injection attempts encapsulated in `<UNTRUSTED_DATA>`, zero tool escapes |
+| **Human Approval Gate** | 100% | Zero autonomous actions executed; unprivileged approvals blocked with 403 |
 
-### 1 · Clone
+### 5. Full Pipeline Throughput & Latency
+Measured end-to-end execution time for `SupplyChainAnalyzer.full_analysis()` (anomaly detection, composite risk scoring, Holt-Winters forecasting, bullwhip analysis, data quality checks).
+
+| Dataset Size | Execution Time (s) | Throughput (rows/s) | Peak Memory (MB) |
+|---|---|---|---|
+| 1,000 rows | **1.19 s** | 843 rows/s | 0.7 MB |
+| 5,000 rows | **1.48 s** | 3,388 rows/s | 1.6 MB |
+| 20,000 rows | **2.40 s** | 8,334 rows/s | 5.9 MB |
+
+### Evaluation Limitations & Known Caveats
+- **Synthetic Ground Truth**: Anomaly detection and risk ranking benchmarks use a synthetic generator with injected mathematical perturbations; real-world ERP data contains irregular missingness and unmodeled supplier communication delays.
+- **Seasonal Forecast Baseline**: Seasonal-naive performs comparably to Holt-Winters on regular quarterly cycles; Holt-Winters adds value primarily when underlying trends shift gradually over multi-year horizons.
+- **Offline Agent Evaluation**: The agent reliability harness evaluates schema conformance, prompt sanitization, and fallback paths offline. Live LLM evaluations require active Groq or AWS Bedrock credentials.
+<!-- EVAL:END -->
+
+---
+
+## The mitigation agent
+
+The mitigation agent automates disruption response while strictly enforcing human oversight:
+
+1. `get_backup_suppliers`: Queries the graph topology for alternate suppliers offering overlapping SKUs.
+2. `simulate_reroute_cost`: Estimates volume reallocation costs and delta metrics using stochastic distributions.
+3. `retrieve_context`: Queries ChromaDB for historical SLA clauses, penalty terms, and escalation playbooks (`data/documents/`).
+4. `draft_action`: Uses Groq (`llama-3.3-70b-versatile`), AWS Bedrock, or deterministic offline heuristics to formulate a structured mitigation proposal.
+5. `write_pending_action`: Persists the plan to `pending_actions` in SQLite/PostgreSQL with status `awaiting_approval`.
+6. `node_execute_action`: **Human Approval Gate**. Actions cannot execute autonomously. Execution is triggered only by an explicit API request from an authorized user (`manager` or `admin`).
+
+---
+
+## Security
+
+- **Authentication & RBAC:** JWT access tokens (60-minute lifetime) with rotating 30-day refresh tokens stored as salted hashes. Passwords hashed using bcrypt (cost factor 12). 4 RBAC roles: `admin`, `manager`, `analyst`, and `viewer`.
+- **Production Guard:** Server verifies `SECRET_KEY` on startup in production mode (`DEBUG=false`) and terminates immediately if default development keys are detected (`backend/app/core/config.py`).
+- **Audit Logging:** In-database audit trail (`AuditMiddleware`) capturing method, path, status, latency, request IDs, and caller identity for every non-health HTTP request.
+- **Untrusted Input Sanitization:** Uploaded CSV strings (supplier names, notes, custom fields) are sanitized to prevent delimiter collisions, length exploits, formula injection, and prompt injections before reaching LLM prompts.
+- **Security Scans:** Automated CI scanning via `bandit` and `pip-audit`. Comprehensive threat model and STRIDE analysis documented in [SECURITY.md](SECURITY.md).
+
+---
+
+## Tech stack and why
+
+| Layer | Technology | Rationale |
+| :--- | :--- | :--- |
+| **Frontend** | Next.js 16 + React 19 + TypeScript | Static type safety across REST and WebSocket payloads; modern server/client rendering |
+| **Visualization** | Tailwind CSS, Recharts, react-force-graph-2d | Responsive operational dashboards and 2D force-directed supplier graphs |
+| **Backend API** | FastAPI + Pydantic v2 + Uvicorn | High-throughput asynchronous endpoints with automated OpenAPI documentation and validation |
+| **Machine Learning** | scikit-learn, NetworkX, statsmodels | Reliable in-process algorithms running with zero external cluster dependencies |
+| **Agent Framework** | LangGraph | Deterministic state machine architecture with explicit checkpointing for human approvals |
+| **Vector Database** | ChromaDB (`all-MiniLM-L6-v2`) | Local, embedded vector search over internal SLAs and incident playbooks |
+| **Database** | SQLite (development) / PostgreSQL (production) | SQLAlchemy ORM with WAL mode for lightweight local setup and robust production migration |
+| **Infrastructure** | Docker, GitHub Actions, AWS CDK (TypeScript) | Multi-stage container builds, automated CI pipelines, and infrastructure-as-code for ECS Fargate |
+
+---
+
+## Quick start
+
+### Running with Docker (Recommended)
 
 ```bash
-git clone https://github.com/yourusername/nexus.git
-cd nexus
+# 1. Clone repository
+git clone https://github.com/suyash655/Nexus-supplychain.git
+cd Nexus-supplychain
+
+# 2. Configure environment
+cp .env.example backend/.env
+
+# 3. Build and launch services
+docker compose up --build
 ```
 
-### 2 · Backend Setup
+- Web Interface: `http://localhost:3000` (click "Skip to demo" or upload your own CSV)
+- Interactive API Documentation: `http://localhost:8000/docs`
 
-```bash
+<details>
+<summary>Running Locally without Docker</summary>
+
+```powershell
+# Backend Setup
 cd backend
-
-# Create and activate virtual environment
 python -m venv ../.venv
-
-# Windows
+# On Windows:
 ..\.venv\Scripts\activate
-
-# macOS / Linux
+# On Linux/macOS:
 source ../.venv/bin/activate
 
-# Install dependencies
 pip install -r requirements.txt
-```
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 
-### 3 · Environment Variables
-
-```bash
-# Copy the example file
-cp .env.example .env        # macOS/Linux
-copy .env.example .env      # Windows
-```
-
-Open `.env` and configure:
-
-```env
-# ── Required ────────────────────────────────────────────────────────
-DATABASE_URL=sqlite:///data/synchain.db
-SECRET_KEY=change-me-to-a-random-64-char-string-in-production
-
-# ── CORS ─────────────────────────────────────────────────────────────
-CORS_ORIGINS=http://localhost:3000
-
-# ── Demo Mode (disables auth requirement for local exploration) ──────
-ALLOW_DEMO=true
-
-# ── LLM (optional — system works fully offline without these) ────────
-LLM_PROVIDER=offline          # or: groq | bedrock
-GROQ_API_KEY=                 # get free key at console.groq.com
-GROQ_MODEL=llama-3.3-70b-versatile
-```
-
-> **Note:** `SECRET_KEY` must be changed before any non-local deployment. The server will refuse to start in production mode with the default value.
-
-### 4 · Run the Backend
-
-```bash
-# From the backend/ directory, with .venv activated
-cd backend
-python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-```
-
-You should see:
-```
-INFO  [NEXUS] ✓ SupplyChainAnalyzer initialised
-INFO  [NEXUS] ✓ SupplyChainGraph initialised
-INFO  [NEXUS] All engines initialised successfully — server ready
-INFO  Uvicorn running on http://0.0.0.0:8000
-```
-
-### 5 · Frontend Setup
-
-```bash
-# In a new terminal, from the project root
+# Frontend Setup (in a separate terminal)
 cd frontend
 npm install
-```
-
-Create `frontend/.env.local`:
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
-
-```bash
+echo "NEXT_PUBLIC_API_URL=http://127.0.0.1:8000" > .env.local
 npm run dev
 ```
 
-### 6 · Open the App
-
-| Service | URL |
-|---|---|
-| **Web App** | http://localhost:3000 |
-| **API** | http://localhost:8000 |
-| **API Docs (Swagger)** | http://localhost:8000/docs |
-
-### Alternative: Docker Compose
-
-```bash
-# From project root — spins up both services
-docker-compose up
-```
-
----
-
-## 📖 Usage
-
-### Upload Your First Dataset
-
-1. Navigate to **http://localhost:3000/upload**
-2. Drop any CSV with supply chain data (supplier, SKU, delay_days, cost columns — others are auto-detected)
-3. Review the column mapping preview and click **Upload & Analyze**
-4. The dashboard auto-redirects and populates within ~60 seconds as the ML pipeline runs
-
-**Don't have a CSV?** Run the included test data generator:
-
-```bash
+Run test suite:
+```powershell
 cd backend
-python test_upload_flow.py   # generates 50-row pseudo CSV and runs full pipeline validation
+pytest
 ```
-
-### Exploring the Dashboard
-
-```
-/dashboard       → KPI strip, supplier risk leaderboard, trend charts
-/graph           → Interactive supply chain network (click nodes, simulate failures)
-/analytics       → Deep-dive: time-series, regional breakdown, data quality
-/xai             → SHAP feature importance + counterfactual "what if" explanations
-/control-tower   → Live alert feed, incident management, root cause correlation
-/mitigation      → Review and approve/reject AI agent action plans
-/copilot         → Natural language Q&A over your supply chain data
-```
-
-### Demo Mode (No Login Required)
-
-Click **"Skip to demo →"** on the login page to explore with pre-loaded sample data. No credentials needed.
+</details>
 
 ---
 
-## 🔐 Environment Variables Reference
+## Configuration
 
-| Variable | Default | Description |
-|---|---|---|
-| `DATABASE_URL` | `sqlite:///data/synchain.db` | SQLAlchemy connection string |
-| `SECRET_KEY` | `dev-secret` | JWT signing key — **change in production** |
-| `CORS_ORIGINS` | `http://localhost:3000` | Comma-separated allowed origins |
-| `ALLOW_DEMO` | `true` | Enables unauthenticated demo access |
-| `LLM_PROVIDER` | `offline` | `offline` \| `groq` \| `bedrock` |
-| `GROQ_API_KEY` | _(empty)_ | Groq API key for LLM features |
-| `MAX_UPLOAD_BYTES` | `52428800` | Max upload file size (50 MB default) |
-| `MAX_ANALYSIS_ROWS` | `100000` | Row cap for ML pipeline |
-| `DEBUG` | `false` | Enables hot-reload and verbose logging |
+All configuration is managed via environment variables. Copy `.env.example` to `backend/.env` to customize:
 
----
-
-## 🧩 Challenges & Learnings
-
-### The Hardest Problem: Making Async Data Feel Synchronous
-
-The core UX challenge was this: the ML pipeline takes 30–90 seconds after a CSV upload. If you just show a spinner, users bounce. If you redirect immediately, they see empty charts.
-
-**What I tried first:** A single long-polling endpoint that blocked until analysis finished. This caused request timeouts and didn't scale past one user.
-
-**What I built instead:** A three-layer freshness system:
-1. The upload response returns immediately (rows inserted ✓)
-2. The dashboard reads live DB aggregates for analytics (supplier counts, totals) — these are available *instantly*
-3. Heavier analysis results (ML risk scores, graph topology) are served from an `analysis_results` cache table, which the pipeline populates asynchronously
-4. The graph page polls `/graph/status` every 5 seconds and swaps in real data the moment it lands — showing demo fallback data in the meantime
-
-This meant users see *something useful immediately* and *real data progressively* — which is exactly how production dashboards like Datadog and Grafana work.
-
-**Key takeaways:**
-
-- **Decouple write latency from read latency.** Background workers + result caches are the right pattern for any slow computation that multiple clients need to read.
-- **Design for degraded mode.** Every engine in NEXUS can fail independently. The server starts in degraded mode and keeps serving the healthy endpoints. This forced me to think about fault isolation rather than assuming happy-path.
-- **Data shape bugs are hard to debug without types.** The frontend is fully TypeScript with strict API response shapes. I caught at least a dozen bugs at compile time that would have been silent runtime `undefined` errors in plain JavaScript.
+| Variable | Default | Purpose |
+| :--- | :--- | :--- |
+| `DATABASE_URL` | `sqlite:///data/synchain.db` | SQLAlchemy connection string (SQLite dev / PostgreSQL prod) |
+| `SECRET_KEY` | *(dev default)* | JWT token signing key (must be changed in production) |
+| `ALLOW_DEMO` | `true` | Allows unauthenticated demo access for local evaluation |
+| `LLM_PROVIDER` | `offline` | Active provider: `offline`, `groq`, or `bedrock` |
+| `GROQ_API_KEY` | *(empty)* | API key for Groq inference (`llama-3.3-70b-versatile`) |
+| `MAX_UPLOAD_BYTES` | `52428800` | Upload limit cap (50 MB) |
+| `MAX_ANALYSIS_ROWS` | `100000` | Maximum rows processed in a single analysis run |
 
 ---
 
-## 🔭 Future Enhancements
+## Project structure
 
-1. **Multi-tenant SaaS mode** — The DB schema already has a `tenant_id` column on every table and row-level security SQL in `migrations/`. Wiring this through the auth layer to a subscription system is the next step.
-
-2. **Real-time streaming ML** — Currently the pipeline runs once per upload. The architecture (Kafka-ready connector interfaces, a DataScheduler engine, and the streaming processor in `data_lake.py`) is designed for continuous ingestion. Connecting a live ERP feed would make risk scores update in real time.
-
-3. **True causal inference** — `CausalGenomeEngine` currently does graph-based propagation. Replacing the internals with [DoWhy](https://github.com/py-why/dowhy) or [CausalNex](https://github.com/quantumblacklabs/causalnex) would allow the system to answer "did this supplier's delay *cause* the cost increase?" rather than just "are they correlated?"
-
----
-
-## 📁 Project Structure
-
-```
-nexus/
+```text
+Nexus-supplychain/
 ├── backend/
+│   ├── agent/                 # LangGraph mitigation workflow and LLM client
 │   ├── app/
-│   │   ├── main.py              ← FastAPI entry point, lifespan, middleware
-│   │   ├── routers/             ← 30 API route modules (one domain per file)
-│   │   ├── engines/             ← ML/AI engine singletons
-│   │   ├── core/                ← Config, DB, errors, orchestrator
-│   │   ├── models/              ← SQLAlchemy ORM models
-│   │   ├── services/upload/     ← Parser, schema detector, validator
-│   │   └── middleware/          ← JWT auth, audit trail
-│   ├── agent/
-│   │   ├── mitigation_graph.py  ← LangGraph 6-node agent
-│   │   ├── llm_client.py        ← Groq/Bedrock/offline abstraction
-│   │   └── tools.py             ← Supplier lookup, notification tools
-│   ├── tests/                   ← Pytest suite
-│   ├── Dockerfile
-│   └── requirements.txt
-│
+│   │   ├── auth/              # JWT, password hashing, and RBAC implementation
+│   │   ├── core/              # Config, DB session, dependencies, and orchestrator
+│   │   ├── engines/           # ML engines (analyzer, forecaster, graph, XAI, etc.)
+│   │   ├── models/            # SQLAlchemy database models
+│   │   ├── routers/           # FastAPI router endpoints (REST and WebSocket)
+│   │   └── services/upload/   # CSV parsing, validation, and sanitization
+│   ├── rag/                   # Document chunking, embedding, and retriever
+│   └── tests/                 # Unit and integration pytest test suite
 ├── frontend/
-│   ├── app/                     ← Next.js App Router pages
-│   │   ├── dashboard/           ← Command center
-│   │   ├── upload/              ← Upload wizard + column mapping
-│   │   ├── graph/               ← Supply chain network (D3)
-│   │   ├── analytics/           ← Deep analytics views
-│   │   ├── control-tower/       ← Real-time ops board
-│   │   ├── mitigation/          ← Agent approval UI
-│   │   ├── xai/                 ← Explainability (SHAP)
-│   │   └── copilot/             ← AI chat
-│   ├── hooks/useApi.ts          ← Custom SWR-style data fetching
-│   ├── lib/api.ts               ← Typed API client
-│   └── Dockerfile.frontend
-│
-├── .github/workflows/deploy.yml ← CI/CD pipeline
-├── docker-compose.yml
-├── ARCHITECTURE.md              ← Deep-dive system design doc
-└── README.md                    ← You are here
+│   ├── app/                   # Next.js App Router (dashboard, graph, control-tower, etc.)
+│   ├── components/            # Reusable UI components, charts, and hooks
+│   └── styles/                # Tailwind CSS stylesheets
+├── docs/                      # Architecture diagrams, baseline audits, honesty reports
+├── infra/                     # AWS CDK TypeScript infrastructure definitions
+└── scripts/                   # Local startup, verification, and screenshot scripts
 ```
 
 ---
 
-## 🤝 Contributing
+## Design decisions and challenges
 
-This is a solo learning project, but issues and suggestions are welcome.
-
-1. Fork the repo
-2. Create a branch: `git checkout -b feature/your-idea`
-3. Commit your changes: `git commit -m 'feat: add your feature'`
-4. Push and open a Pull Request
+1. **Decoupled Asynchronous Processing:** A blocking end-to-end analysis on large CSVs caused HTTP gateway timeouts. The application returns upload status immediately, displays initial database aggregates, and offloads heavy statistical routines to an orchestrator writing to `analysis_results`. Dashboard views read the cache, maintaining sub-50ms render times.
+2. **Deterministic Offline Fallbacks:** Cloud LLM dependencies can fail due to network outages, rate limits, or missing API keys. Every agent workflow and analytics summarizer includes deterministic, rule-based fallback paths that produce actionable insights offline.
+3. **Approval-Gated Mitigation Architecture:** Autonomous execution of supply chain POs or reroutes presents severe operational risk. The agent separates plan drafting from action execution: actions remain in an `awaiting_approval` state until reviewed by an authorized user (`manager` or `admin`).
+4. **Strict Schema Validation at Boundaries:** Rather than feeding untrusted LLM outputs directly into application state, outputs are validated against strict Pydantic schemas with repair loops before persisting.
 
 ---
 
-## 📄 License
+## Limitations
 
-Distributed under a **Research & Evaluation License** — free to use, study, and build upon for non-commercial purposes. See [`LICENSE`](LICENSE) for details.
+- **Heuristic Risk Weights:** Composite risk weights are determined heuristically rather than learned through end-to-end backpropagation on labeled historical loss data.
+- **Topological Edge Assumptions:** Graph cascade simulations assume static relationships and average lead times without dynamic capacity queuing.
+- **Evaluation Scope:** Benchmark evaluations utilize synthetic datasets with injected ground-truth anomalies to measure detector precision and recall objectively.
+- **Structural Propagation vs Causal Inference:** Graph diffusion tracks downstream exposure paths but does not estimate interventional counterfactual distributions using do-calculus.
 
 ---
 
-<div align="center">
+## Roadmap
 
-**Built by [Your Name](https://yourportfolio.com)**
+- [ ] Incorporate causal discovery algorithms (e.g., DoWhy / LiNGAM) to validate directed dependency structures.
+- [ ] Implement message queue ingestion (e.g., Kafka / AWS SQS) for streaming transaction updates.
+- [ ] Add learned risk scoring calibrated on historical supplier SLA default datasets.
+- [ ] Expand multi-tenant tenant isolation with Postgres Row-Level Security enforcement across all runtime queries.
 
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0A66C2?style=flat-square&logo=linkedin)](https://linkedin.com/in/yourprofile)
-[![Portfolio](https://img.shields.io/badge/Portfolio-Visit-06b6d4?style=flat-square&logo=vercel)](https://yourportfolio.com)
+---
 
-*If this project helped you or impressed you — a ⭐ on GitHub goes a long way for a fresher's portfolio.*
+## Claims and where to find them
 
-</div>
+| Claim | Verified Implementation File |
+| :--- | :--- |
+| **5-node LangGraph agent** | `backend/agent/mitigation_graph.py` |
+| **Server-side approval gate** | `backend/agent/mitigation_graph.py:473` |
+| **Isolation Forest anomaly detection** | `backend/app/engines/analyzer.py:127` |
+| **Holt-Winters time-series forecaster** | `backend/app/engines/forecaster.py:290` |
+| **NetworkX graph centrality & cascade** | `backend/app/engines/graph_engine.py:363` |
+| **Permutation feature importance** | `backend/app/engines/xai_engine.py:28` |
+| **JWT auth & bcrypt cost 12** | `backend/app/auth/utils.py:31` |
+| **RBAC permissions matrix** | `backend/app/auth/service.py:16` |
+| **HTTP request audit middleware** | `backend/app/middleware/audit.py:14` |
+| **Production secret enforcement** | `backend/app/core/config.py:84` |
+| **ChromaDB RAG retriever** | `backend/rag/retriever.py:66` |
+| **Offline LLM fallback** | `backend/app/engines/ai_copilot.py:57` |
+
+---
+
+Built by Suyash Jaysawal · [GitHub](https://github.com/suyash655) · [LinkedIn](https://www.linkedin.com/in/suyash-jaysawal-5869173a3)  
+License: See [LICENSE](LICENSE) (Research & Evaluation License).

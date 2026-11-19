@@ -5,14 +5,13 @@ GraphQL endpoints for flexible data queries and mutations.
 """
 
 import logging
-import json
-from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from app.core.api_gateway import api_gateway, APIEventType
+from app.core.api_gateway import api_gateway
 
 logger_gql = logging.getLogger("nexus.graphql")
 
@@ -36,7 +35,7 @@ class GraphQLResponse(BaseModel):
 async def get_graphql_schema():
     """
     Get the current GraphQL schema.
-    
+
     Returns the complete GraphQL schema with all types, queries, mutations, and subscriptions.
     """
     try:
@@ -55,7 +54,7 @@ async def get_graphql_schema():
 async def execute_graphql_query(request: Request, graphql_query: GraphQLQuery):
     """
     Execute a GraphQL query.
-    
+
     This is a simplified GraphQL execution engine. For production use,
     consider using a full GraphQL library like graphene or strawberry.
     """
@@ -63,16 +62,16 @@ async def execute_graphql_query(request: Request, graphql_query: GraphQLQuery):
         # Check rate limit
         client_id = request.client.host if request.client else "unknown"
         rate_limit_result = api_gateway.check_rate_limit(client_id)
-        
+
         if not rate_limit_result.get("allowed"):
             raise HTTPException(status_code=429, detail=rate_limit_result)
-        
+
         # Record API usage
         api_gateway.record_api_usage("graphql_query", client_id)
-        
+
         # Parse the query to determine operation type
         query_string = graphql_query.query.strip()
-        
+
         # Simple query parsing (in production, use a proper GraphQL parser)
         if query_string.startswith("query") or query_string.startswith("{"):
             # This is a query operation
@@ -89,9 +88,9 @@ async def execute_graphql_query(request: Request, graphql_query: GraphQLQuery):
         else:
             # Assume it's a query (default)
             result = await _execute_query(graphql_query.query, graphql_query.variables)
-        
+
         return result
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -107,22 +106,22 @@ async def execute_graphql_query(request: Request, graphql_query: GraphQLQuery):
 async def _execute_query(query: str, variables: Optional[Dict[str, Any]]) -> GraphQLResponse:
     """
     Execute a GraphQL query operation.
-    
+
     This is a simplified implementation. In production, use a proper
     GraphQL execution engine like graphene or strawberry.
     """
     try:
         # Extract query name (simplified parsing)
         query_name = _extract_query_name(query)
-        
+
         # Get the resolver from the schema builder
         if query_name in api_gateway.graphql_builder.queries:
             query_def = api_gateway.graphql_builder.queries[query_name]
             resolver_name = query_def["resolver"]
-            
+
             # Execute the resolver (this would call the actual business logic)
             result_data = await _execute_resolver(resolver_name, variables or {})
-            
+
             return GraphQLResponse(data={query_name: result_data})
         else:
             return GraphQLResponse(
@@ -131,7 +130,7 @@ async def _execute_query(query: str, variables: Optional[Dict[str, Any]]) -> Gra
                     "extensions": {"code": "GRAPHQL_VALIDATION_FAILED"}
                 }]
             )
-            
+
     except Exception as e:
         logger_gql.error(f"Error executing query: {e}")
         return GraphQLResponse(
@@ -145,22 +144,22 @@ async def _execute_query(query: str, variables: Optional[Dict[str, Any]]) -> Gra
 async def _execute_mutation(mutation: str, variables: Optional[Dict[str, Any]]) -> GraphQLResponse:
     """
     Execute a GraphQL mutation operation.
-    
+
     This is a simplified implementation. In production, use a proper
     GraphQL execution engine like graphene or strawberry.
     """
     try:
         # Extract mutation name (simplified parsing)
         mutation_name = _extract_mutation_name(mutation)
-        
+
         # Get the resolver from the schema builder
         if mutation_name in api_gateway.graphql_builder.mutations:
             mutation_def = api_gateway.graphql_builder.mutations[mutation_name]
             resolver_name = mutation_def["resolver"]
-            
+
             # Execute the resolver (this would call the actual business logic)
             result_data = await _execute_resolver(resolver_name, variables or {})
-            
+
             return GraphQLResponse(data={mutation_name: result_data})
         else:
             return GraphQLResponse(
@@ -169,7 +168,7 @@ async def _execute_mutation(mutation: str, variables: Optional[Dict[str, Any]]) 
                     "extensions": {"code": "GRAPHQL_VALIDATION_FAILED"}
                 }]
             )
-            
+
     except Exception as e:
         logger_gql.error(f"Error executing mutation: {e}")
         return GraphQLResponse(
@@ -213,7 +212,7 @@ def _extract_mutation_name(mutation: str) -> str:
 async def _execute_resolver(resolver_name: str, variables: Dict[str, Any]) -> Any:
     """
     Execute a resolver function.
-    
+
     This is a placeholder implementation. In production, this would
     call the actual business logic resolvers.
     """
@@ -237,7 +236,7 @@ async def _execute_resolver(resolver_name: str, variables: Dict[str, Any]) -> An
         "update_demand_forecast": lambda: {"sku": "SKU001", "period": "2024-01", "forecast": 1050, "confidence": 0.87},
         "create_scenario": lambda: {"id": "SCENARIO-001", "name": "Scenario 1", "status": "created"},
     }
-    
+
     if resolver_name in resolvers:
         return resolvers[resolver_name]()
     else:
@@ -252,7 +251,7 @@ async def get_graphql_stats():
     """
     try:
         gateway_stats = api_gateway.get_gateway_stats()
-        
+
         return {
             "status": "success",
             "graphql_stats": {
@@ -273,12 +272,12 @@ async def get_graphql_stats():
 async def graphql_introspection():
     """
     GraphQL introspection endpoint for tool support.
-    
+
     Returns schema information for GraphQL clients like GraphiQL or Apollo Studio.
     """
     try:
-        schema = api_gateway.get_graphql_schema()
-        
+        api_gateway.get_graphql_schema()
+
         # Convert to introspection format (simplified)
         introspection = {
             "__schema": {
@@ -295,7 +294,7 @@ async def graphql_introspection():
                 "subscriptionType": {"name": "Subscription"} if api_gateway.graphql_builder.subscriptions else None
             }
         }
-        
+
         return {
             "status": "success",
             "data": introspection,

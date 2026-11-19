@@ -24,7 +24,6 @@ from app.utils.error_monitoring import (  # type: ignore
     get_error_summary,
     get_recent_errors,
 )
-from app.core.errors import NotFoundError  # type: ignore
 
 logger = logging.getLogger("nexus.monitoring")
 
@@ -37,8 +36,8 @@ def get_system_metrics(
 ):
     """
     Get current system error metrics.
-    
-    Returns aggregated error statistics including error rates, 
+
+    Returns aggregated error statistics including error rates,
     error types, and recent error counts.
     """
     try:
@@ -64,7 +63,7 @@ def get_error_summary_endpoint(
 ):
     """
     Get error summary for a specified time period.
-    
+
     Provides aggregated error statistics for the specified time window,
     including top error types, codes, and endpoints.
     """
@@ -92,7 +91,7 @@ def get_recent_errors_endpoint(
 ):
     """
     Get recent errors with optional filtering.
-    
+
     Returns detailed error records with stack traces and metadata.
     """
     try:
@@ -117,21 +116,22 @@ def get_detailed_health(
 ):
     """
     Get detailed system health information.
-    
+
     Includes database status, error metrics, and system overview.
     """
     try:
         # Database health check
-        from sqlalchemy import text  # type: ignore
         import time
-        
+
+        from sqlalchemy import text  # type: ignore
+
         db_start = time.time()
         db.execute(text("SELECT 1"))
         db_latency_ms = round((time.time() - db_start) * 1000, 2)
-        
+
         # Get error metrics
         error_metrics = get_error_metrics()
-        
+
         # Check engine status
         from app.main import engines  # type: ignore
         engine_status = {
@@ -147,12 +147,12 @@ def get_detailed_health(
             "sop_engine": engines.sop_engine is not None,
             "response_planning_engine": engines.response_planning_engine is not None,
         }
-        
+
         # Calculate overall health
         healthy_engines = sum(1 for status in engine_status.values() if status)
         total_engines = len(engine_status)
         engine_health_pct = (healthy_engines / total_engines * 100) if total_engines > 0 else 0
-        
+
         # Determine overall status
         if db_latency_ms > 1000 or error_metrics["total_errors"] > 1000:
             overall_status = "degraded"
@@ -160,7 +160,7 @@ def get_detailed_health(
             overall_status = "degraded"
         else:
             overall_status = "healthy"
-        
+
         return {
             "status": "success",
             "health": {
@@ -195,23 +195,23 @@ def get_system_status(
 ):
     """
     Get system status overview.
-    
+
     Quick status check for monitoring dashboards.
     """
     try:
         error_metrics = get_error_metrics()
-        
+
         # Determine if system is experiencing issues
         error_rate = error_metrics.get("error_rate_per_minute", 0)
         total_errors = error_metrics.get("total_errors", 0)
-        
+
         if error_rate > 10 or total_errors > 500:
             status = "warning"
         elif error_rate > 5 or total_errors > 200:
             status = "degraded"
         else:
             status = "operational"
-        
+
         return {
             "status": "success",
             "system_status": status,

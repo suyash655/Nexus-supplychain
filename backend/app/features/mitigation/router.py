@@ -20,8 +20,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_db, require_auth
-from app.models.supply import PendingAction
 from app.models.agent_actions import AgentTrace
+from app.models.supply import PendingAction
 
 logger = logging.getLogger("nexus.routers.mitigation")
 router = APIRouter(prefix="/mitigation", tags=["Mitigation"])
@@ -111,10 +111,19 @@ def approve_pending_action(
 ):
     """
     Human approves a mitigation action.
-    Triggers Node 6: execute_action (mock PO / notification).
+    Server-side gate: only manager or admin (or active demo mode) can approve.
+    Triggers execute_action.
     """
+    allowed_roles = {"admin", "manager"}
+    user_role = user.get("role", "viewer")
+    if user_role not in allowed_roles and not user.get("demo", False):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Role '{user_role}' is not authorized to approve actions. Requires manager or admin.",
+        )
+
     from agent.mitigation_graph import approve_action  # type: ignore
-    result = approve_action(action_id, body.approved_by)
+    result = approve_action(action_id, body.approved_by, role=user_role)
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
     return result
@@ -127,9 +136,17 @@ def reject_pending_action(
     db: Session = Depends(get_db),
     user: dict  = Depends(require_auth),
 ):
-    """Human rejects a mitigation action."""
+    """Human rejects a mitigation action. Server-side gate: manager or admin."""
+    allowed_roles = {"admin", "manager"}
+    user_role = user.get("role", "viewer")
+    if user_role not in allowed_roles and not user.get("demo", False):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Role '{user_role}' is not authorized to reject actions. Requires manager or admin.",
+        )
+
     from agent.mitigation_graph import reject_action  # type: ignore
-    result = reject_action(action_id, body.rejected_by, body.reason)
+    result = reject_action(action_id, body.rejected_by, body.reason, role=user_role)
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
     return result
@@ -211,7 +228,7 @@ def manual_trigger(
     Manually trigger the mitigation loop for testing.
     Useful for demos — no need to wait for the ML pipeline to cross a threshold.
     """
-    from agent.mitigation_graph import trigger_mitigation, CRITICAL_THRESHOLD  # type: ignore
+    from agent.mitigation_graph import CRITICAL_THRESHOLD, trigger_mitigation  # type: ignore
     from app.core.orchestrator import get_analysis_result  # type: ignore
 
     if body.risk_score < CRITICAL_THRESHOLD:

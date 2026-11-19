@@ -6,7 +6,6 @@ from typing import Iterable
 
 import pandas as pd
 
-
 ON_TIME_DELAY_TOLERANCE_DAYS = 1
 
 CORE_COMPLETENESS_COLUMNS = (

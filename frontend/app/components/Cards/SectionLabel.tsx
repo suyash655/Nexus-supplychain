@@ -13,7 +13,7 @@ export function SectionLabel({ children }: SectionLabelProps) {
         fontSize: 11,
         fontWeight: 500,
         textTransform: "uppercase",
-        letterSpacing: "0.05em",
+        letterSpacing: "0.1em",
         color: "var(--color-text-2)",
         marginBottom: 12,
       }}
