@@ -19,8 +19,8 @@ Error code rationale (derived from actual usage in this codebase):
 
 from __future__ import annotations
 
-import uuid
 import logging
+import uuid
 from typing import Literal, Optional
 
 from fastapi import Request

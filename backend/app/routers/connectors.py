@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
+from app.auth.service import require_permission
 from app.connectors import CONNECTOR_REGISTRY, ConnectorConfig, get_connector
 from app.core.dependencies import get_db, require_auth
-from app.auth.service import require_permission
 
 router = APIRouter(prefix="/connectors", tags=["Connectors"])
 

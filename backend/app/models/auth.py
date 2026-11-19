@@ -1,6 +1,6 @@
-from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, JSON, ForeignKey, Index, Text  # type: ignore
+from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Index, Integer, String, Text  # type: ignore
 from sqlalchemy.orm import relationship  # type: ignore
+
 from app.models.base import Base, _utcnow  # type: ignore
 
 

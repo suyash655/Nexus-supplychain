@@ -13,9 +13,7 @@ generate_answer: builds prompt from live data + retrieved chunks, calls LLM,
 The graph is compiled once at module import and reused across requests.
 """
 
-import json
 import logging
-import re
 from typing import Any, Dict
 
 logger = logging.getLogger("nexus.agent")
@@ -230,8 +228,9 @@ def _offline_answer(state: Dict[str, Any]) -> str:
 def build_graph():
     """Build and compile the LangGraph agent. Returns a compiled graph."""
     try:
-        from langgraph.graph import StateGraph, END  # type: ignore
-        from agent.state import AgentState           # type: ignore
+        from langgraph.graph import END, StateGraph  # type: ignore
+
+        from agent.state import AgentState  # type: ignore
 
         g = StateGraph(AgentState)
         g.add_node("extract_intent",   node_extract_intent)

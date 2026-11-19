@@ -5,7 +5,7 @@ TypedDict that flows through every node of the LangGraph agent.
 All fields are optional so partial updates work cleanly.
 """
 
-from typing import TypedDict, List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional, TypedDict
 
 
 class AgentState(TypedDict, total=False):
