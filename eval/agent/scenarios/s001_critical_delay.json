@@ -1,0 +1,12 @@
+{
+  "scenario_id": "s001",
+  "title": "Critical delay on sole-source supplier",
+  "supplier": "Apex Dynamics",
+  "risk_score": 88.5,
+  "metrics": {
+    "avg_delay": 14.2,
+    "defect_rate": 0.08
+  },
+  "expected_action_type": "find_alternative",
+  "expected_urgency": "critical"
+}

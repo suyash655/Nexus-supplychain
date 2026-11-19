@@ -6,12 +6,13 @@ and performance analytics for supply chain operations.
 """
 
 import logging
+from collections import defaultdict
+from datetime import datetime, timedelta, timezone
+from enum import Enum
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Any, Optional, Tuple
-from datetime import datetime, timezone, timedelta
-from collections import defaultdict
-from enum import Enum
 
 logger_ct = logging.getLogger("nexus.control_tower")
 
@@ -48,7 +49,7 @@ class ControlTowerEngine:
     def initialize(self, config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Initialize control tower with monitoring configuration.
-        
+
         Args:
             config: Configuration dict with thresholds and rules
         """
@@ -70,20 +71,20 @@ class ControlTowerEngine:
                     "inventory_days_of_supply_max": 90
                 }
             }
-            
+
             config = config or default_config
             self.kpi_thresholds = config.get("kpi_thresholds", {})
             self.monitoring_rules = config.get("monitoring_rules", {})
-            
+
             self._initialised = True
-            
+
             return {
                 "status": "success",
                 "thresholds_configured": len(self.kpi_thresholds),
                 "rules_configured": len(self.monitoring_rules),
                 "initialised_at": datetime.now(timezone.utc).isoformat()
             }
-            
+
         except Exception as e:
             logger_ct.error(f"Error initializing control tower: {e}")
             return {"error": str(e), "initialised": False}
@@ -92,13 +93,13 @@ class ControlTowerEngine:
         """
         Perform real-time monitoring of supply chain operations.
         Detects anomalies, exceptions, and performance issues.
-        
+
         Args:
             supply_data: Current supply chain data
         """
         if not self._initialised:
             return {"error": "Control tower not initialised"}
-        
+
         try:
             monitoring_results = {
                 "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -107,7 +108,7 @@ class ControlTowerEngine:
                 "performance_metrics": {},
                 "risk_indicators": []
             }
-            
+
             # Monitor delays
             if "delay_days" in supply_data.columns:
                 delayed_shipments = supply_data[supply_data["delay_days"] > self.monitoring_rules.get("delay_threshold", 7)]
@@ -119,18 +120,18 @@ class ControlTowerEngine:
                         "affected_suppliers": delayed_shipments["supplier"].unique().tolist() if "supplier" in delayed_shipments.columns else [],
                         "avg_delay": round(delayed_shipments["delay_days"].mean(), 2)
                     })
-            
+
             # Monitor cost variance
             if "cost" in supply_data.columns and "quantity" in supply_data.columns:
                 supply_data["unit_cost"] = supply_data["cost"] / (supply_data["quantity"] + 1e-8)
                 cost_stats = supply_data["unit_cost"].describe()
                 cost_threshold = self.monitoring_rules.get("cost_variance_threshold", 0.2)
-                
+
                 high_cost_shipments = supply_data[
                     (supply_data["unit_cost"] > cost_stats["mean"] * (1 + cost_threshold)) |
                     (supply_data["unit_cost"] < cost_stats["mean"] * (1 - cost_threshold))
                 ]
-                
+
                 if len(high_cost_shipments) > 0:
                     monitoring_results["anomalies"].append({
                         "type": "cost_variance",
@@ -140,12 +141,12 @@ class ControlTowerEngine:
                         "std_cost": round(cost_stats["std"], 2),
                         "affected_skus": high_cost_shipments["sku"].unique().tolist() if "sku" in high_cost_shipments.columns else []
                     })
-            
+
             # Monitor quality issues
             if "quality_score" in supply_data.columns:
                 quality_threshold = self.monitoring_rules.get("quality_threshold", 0.8)
                 low_quality = supply_data[supply_data["quality_score"] < quality_threshold]
-                
+
                 if len(low_quality) > 0:
                     monitoring_results["exceptions"].append({
                         "type": "quality_issue",
@@ -154,13 +155,13 @@ class ControlTowerEngine:
                         "avg_quality": round(low_quality["quality_score"].mean(), 3),
                         "affected_suppliers": low_quality["supplier"].unique().tolist() if "supplier" in low_quality.columns else []
                     })
-            
+
             # Calculate performance metrics
             monitoring_results["performance_metrics"] = self._calculate_performance_metrics(supply_data)
-            
+
             # Risk indicators
             monitoring_results["risk_indicators"] = self._calculate_risk_indicators(supply_data)
-            
+
             return {
                 "status": "success",
                 "monitoring_results": monitoring_results,
@@ -168,7 +169,7 @@ class ControlTowerEngine:
                 "total_exceptions": len(monitoring_results["exceptions"]),
                 "monitored_at": datetime.now(timezone.utc).isoformat()
             }
-            
+
         except Exception as e:
             logger_ct.error(f"Error in real-time monitoring: {e}")
             return {"error": str(e)}
@@ -176,48 +177,48 @@ class ControlTowerEngine:
     def _calculate_performance_metrics(self, data: pd.DataFrame) -> Dict[str, Any]:
         """Calculate real-time performance metrics."""
         metrics = {}
-        
+
         try:
             # On-time delivery rate
             if "delay_days" in data.columns:
                 on_time = len(data[data["delay_days"] <= 0])
                 total = len(data)
                 metrics["on_time_delivery_rate"] = round((on_time / total * 100) if total > 0 else 0, 2)
-            
+
             # Average delay
             if "delay_days" in data.columns:
                 metrics["average_delay_days"] = round(data["delay_days"].mean(), 2)
-            
+
             # Cost metrics
             if "cost" in data.columns:
                 metrics["total_cost"] = round(data["cost"].sum(), 2)
                 metrics["average_cost"] = round(data["cost"].mean(), 2)
-            
+
             # Quality metrics
             if "quality_score" in data.columns:
                 metrics["average_quality_score"] = round(data["quality_score"].mean(), 3)
-            
+
             # Volume metrics
             if "quantity" in data.columns:
                 metrics["total_quantity"] = int(data["quantity"].sum())
                 metrics["average_quantity"] = round(data["quantity"].mean(), 2)
-            
+
         except Exception as e:
             logger_ct.error(f"Error calculating performance metrics: {e}")
-        
+
         return metrics
 
     def _calculate_risk_indicators(self, data: pd.DataFrame) -> List[Dict[str, Any]]:
         """Calculate risk indicators for supply chain."""
         indicators = []
-        
+
         try:
             # Supplier concentration risk
             if "supplier" in data.columns and "cost" in data.columns:
                 supplier_costs = data.groupby("supplier")["cost"].sum()
                 total_cost = supplier_costs.sum()
                 supplier_risks = []
-                
+
                 for supplier, cost in supplier_costs.items():
                     concentration = (cost / total_cost * 100) if total_cost > 0 else 0
                     if concentration > 20:  # >20% concentration is risky
@@ -226,14 +227,14 @@ class ControlTowerEngine:
                             "concentration_percentage": round(concentration, 2),
                             "risk_level": "high" if concentration > 40 else "medium"
                         })
-                
+
                 if supplier_risks:
                     indicators.append({
                         "type": "supplier_concentration",
                         "risk_count": len(supplier_risks),
                         "details": supplier_risks
                     })
-            
+
             # Geographic concentration risk
             if "region" in data.columns:
                 region_counts = data["region"].value_counts()
@@ -244,22 +245,22 @@ class ControlTowerEngine:
                         "regions": len(region_counts),
                         "dominant_region": region_counts.index[0] if len(region_counts) > 0 else None
                     })
-            
+
         except Exception as e:
             logger_ct.error(f"Error calculating risk indicators: {e}")
-        
+
         return indicators
 
     def generate_alerts(self, monitoring_results: Dict[str, Any]) -> List[Dict[str, Any]]:
         """
         Generate alerts based on monitoring results.
-        
+
         Args:
             monitoring_results: Results from real_time_monitoring
         """
         try:
             alerts = []
-            
+
             # Process anomalies
             for anomaly in monitoring_results.get("anomalies", []):
                 alert = {
@@ -276,7 +277,7 @@ class ControlTowerEngine:
                 }
                 alerts.append(alert)
                 self.active_alerts[alert["alert_id"]] = alert
-            
+
             # Process exceptions
             for exception in monitoring_results.get("exceptions", []):
                 alert = {
@@ -293,13 +294,13 @@ class ControlTowerEngine:
                 }
                 alerts.append(alert)
                 self.active_alerts[alert["alert_id"]] = alert
-            
+
             # Check KPI thresholds
             performance = monitoring_results.get("performance_metrics", {})
             for kpi_name, value in performance.items():
                 if kpi_name in self.kpi_thresholds:
                     thresholds = self.kpi_thresholds[kpi_name]
-                    
+
                     if value <= thresholds.get("critical", 0):
                         alerts.append({
                             "alert_id": f"ALERT-{len(self.alert_history) + len(alerts) + 1}",
@@ -332,16 +333,16 @@ class ControlTowerEngine:
                             },
                             "created_at": datetime.now(timezone.utc).isoformat()
                         })
-            
+
             self.alert_history.extend(alerts)
-            
+
             return {
                 "status": "success",
                 "alerts_generated": len(alerts),
                 "alerts": alerts,
                 "total_active_alerts": len(self.active_alerts)
             }
-            
+
         except Exception as e:
             logger_ct.error(f"Error generating alerts: {e}")
             return {"error": str(e)}
@@ -351,45 +352,45 @@ class ControlTowerEngine:
         try:
             if alert_id not in self.active_alerts:
                 return {"error": "Alert not found"}
-            
+
             alert = self.active_alerts[alert_id]
             alert["status"] = AlertStatus.ACKNOWLEDGED.value
             alert["acknowledged_by"] = user
             alert["acknowledged_at"] = datetime.now(timezone.utc).isoformat()
-            
+
             return {
                 "status": "success",
                 "alert_id": alert_id,
                 "new_status": alert["status"]
             }
-            
+
         except Exception as e:
             logger_ct.error(f"Error acknowledging alert: {e}")
             return {"error": str(e)}
 
-    def resolve_alert(self, alert_id: str, resolution_notes: str = "", 
+    def resolve_alert(self, alert_id: str, resolution_notes: str = "",
                      user: str = "system") -> Dict[str, Any]:
         """Resolve an alert."""
         try:
             if alert_id not in self.active_alerts:
                 return {"error": "Alert not found"}
-            
+
             alert = self.active_alerts[alert_id]
             alert["status"] = AlertStatus.RESOLVED.value
             alert["resolved_by"] = user
             alert["resolved_at"] = datetime.now(timezone.utc).isoformat()
             alert["resolution_notes"] = resolution_notes
-            
+
             # Move from active to history
             self.alert_history.append(alert)
             del self.active_alerts[alert_id]
-            
+
             return {
                 "status": "success",
                 "alert_id": alert_id,
                 "new_status": alert["status"]
             }
-            
+
         except Exception as e:
             logger_ct.error(f"Error resolving alert: {e}")
             return {"error": str(e)}
@@ -398,17 +399,17 @@ class ControlTowerEngine:
         """Get all active alerts, optionally filtered by severity."""
         try:
             alerts = list(self.active_alerts.values())
-            
+
             if severity_filter:
                 alerts = [a for a in alerts if a["severity"] == severity_filter]
-            
+
             return {
                 "status": "success",
                 "active_alerts": alerts,
                 "total_count": len(alerts),
                 "severity_breakdown": self._get_severity_breakdown(alerts)
             }
-            
+
         except Exception as e:
             logger_ct.error(f"Error getting active alerts: {e}")
             return {"error": str(e)}
@@ -425,7 +426,7 @@ class ControlTowerEngine:
         """
         Perform advanced alert correlation and root cause analysis.
         Identifies related alerts and patterns that indicate common root causes.
-        
+
         Args:
             alerts: List of alert objects
             time_window_hours: Time window for correlation analysis
@@ -437,28 +438,28 @@ class ControlTowerEngine:
                 "patterns_detected": [],
                 "recommendations": []
             }
-            
+
             if len(alerts) < 2:
                 return {
                     "status": "success",
                     "message": "Insufficient alerts for correlation analysis",
                     "correlation_results": correlation_results
                 }
-            
+
             # Group alerts by time proximity
             current_time = datetime.now(timezone.utc)
             time_groups = defaultdict(list)
-            
+
             for alert in alerts:
                 alert_time = datetime.fromisoformat(alert.get("created_at", current_time.isoformat()))
                 time_bucket = int((current_time - alert_time).total_seconds() / (time_window_hours * 3600))
                 time_groups[time_bucket].append(alert)
-            
+
             # Analyze each time group for correlations
             for time_bucket, group_alerts in time_groups.items():
                 if len(group_alerts) < 2:
                     continue
-                
+
                 # Correlate by affected entities
                 entity_groups = defaultdict(list)
                 for alert in group_alerts:
@@ -467,7 +468,7 @@ class ControlTowerEngine:
                         for entity_type, entity_list in entities.items():
                             for entity in entity_list:
                                 entity_groups[f"{entity_type}:{entity}"].append(alert)
-                
+
                 # Detect patterns
                 for entity_key, entity_alerts in entity_groups.items():
                     if len(entity_alerts) >= 2:
@@ -478,7 +479,7 @@ class ControlTowerEngine:
                             "severity_levels": [a.get("severity", "unknown") for a in entity_alerts],
                             "time_window": f"{time_bucket * time_window_hours} - {(time_bucket + 1) * time_window_hours} hours ago"
                         }
-                        
+
                         # Generate root cause hypothesis
                         if "delay" in str(pattern["alert_types"]).lower():
                             hypothesis = {
@@ -513,10 +514,10 @@ class ControlTowerEngine:
                                     "Check for external factors"
                                 ]
                             }
-                        
+
                         correlation_results["correlated_groups"].append(pattern)
                         correlation_results["root_cause_hypotheses"].append(hypothesis)
-            
+
             # Detect temporal patterns
             severity_timeline = []
             for alert in sorted(alerts, key=lambda x: x.get("created_at", "")):
@@ -525,7 +526,7 @@ class ControlTowerEngine:
                     "severity": alert.get("severity"),
                     "type": alert.get("subtype", alert.get("type", "unknown"))
                 })
-            
+
             # Check for severity escalation
             if len(severity_timeline) >= 3:
                 recent_severities = [s["severity"] for s in severity_timeline[-3:]]
@@ -535,7 +536,7 @@ class ControlTowerEngine:
                         "description": "Increasing severity in recent alerts",
                         "severity": "high"
                     })
-            
+
             # Generate recommendations
             if correlation_results["correlated_groups"]:
                 correlation_results["recommendations"].append(
@@ -545,7 +546,7 @@ class ControlTowerEngine:
                 correlation_results["recommendations"].append(
                     "Address detected patterns to prevent further escalation"
                 )
-            
+
             return {
                 "status": "success",
                 "correlation_results": correlation_results,
@@ -553,7 +554,7 @@ class ControlTowerEngine:
                 "correlated_groups_found": len(correlation_results["correlated_groups"]),
                 "analyzed_at": datetime.now(timezone.utc).isoformat()
             }
-            
+
         except Exception as e:
             logger_ct.error(f"Error in alert correlation analysis: {e}")
             return {"error": str(e)}
@@ -563,7 +564,7 @@ class ControlTowerEngine:
         """
         Generate predictive alerts based on trend analysis and patterns.
         Anticipates issues before they occur with advanced ML-based predictions.
-        
+
         Args:
             historical_data: Historical supply chain data
             look_ahead_days: Days to look ahead for predictions
@@ -571,47 +572,47 @@ class ControlTowerEngine:
         try:
             predictive_alerts = []
             prediction_models = {}
-            
+
             if "date" in historical_data.columns:
                 historical_data["date"] = pd.to_datetime(historical_data["date"])
                 historical_data = historical_data.sort_values("date")
-                
+
                 # Advanced delay trend analysis with multiple models
                 if "delay_days" in historical_data.columns:
                     delay_analysis = self._advanced_delay_prediction(historical_data, look_ahead_days)
                     if delay_analysis:
                         predictive_alerts.extend(delay_analysis["alerts"])
                         prediction_models["delay"] = delay_analysis["model_info"]
-                
+
                 # Advanced cost trend analysis
                 if "cost" in historical_data.columns:
                     cost_analysis = self._advanced_cost_prediction(historical_data, look_ahead_days)
                     if cost_analysis:
                         predictive_alerts.extend(cost_analysis["alerts"])
                         prediction_models["cost"] = cost_analysis["model_info"]
-                
+
                 # Advanced quality trend analysis
                 if "quality_score" in historical_data.columns:
                     quality_analysis = self._advanced_quality_prediction(historical_data, look_ahead_days)
                     if quality_analysis:
                         predictive_alerts.extend(quality_analysis["alerts"])
                         prediction_models["quality"] = quality_analysis["model_info"]
-                
+
                 # Supply chain risk prediction
                 risk_analysis = self._predict_supply_chain_risks(historical_data, look_ahead_days)
                 if risk_analysis:
                     predictive_alerts.extend(risk_analysis["alerts"])
                     prediction_models["risk"] = risk_analysis["model_info"]
-                
+
                 # Capacity and demand forecasting
                 capacity_analysis = self._predict_capacity_issues(historical_data, look_ahead_days)
                 if capacity_analysis:
                     predictive_alerts.extend(capacity_analysis["alerts"])
                     prediction_models["capacity"] = capacity_analysis["model_info"]
-            
+
             # Calculate overall prediction confidence
             overall_confidence = np.mean([alert.get("confidence", 0.5) for alert in predictive_alerts]) if predictive_alerts else 0.0
-            
+
             return {
                 "status": "success",
                 "predictive_alerts": predictive_alerts,
@@ -622,7 +623,7 @@ class ControlTowerEngine:
                 "model_accuracy": self._get_model_accuracy_metrics(),
                 "generated_at": datetime.now(timezone.utc).isoformat()
             }
-            
+
         except Exception as e:
             logger_ct.error(f"Error in predictive alert generation: {e}")
             return {"error": str(e)}
@@ -631,39 +632,39 @@ class ControlTowerEngine:
         """Advanced delay prediction using multiple models."""
         alerts = []
         model_info = {}
-        
+
         try:
             recent_delays = data.tail(30)["delay_days"].values if len(data) >= 30 else data["delay_days"].values
-            
+
             if len(recent_delays) >= 3:
                 # Linear trend
                 linear_trend = np.polyfit(range(len(recent_delays)), recent_delays, 1)[0]
                 linear_prediction = recent_delays[-1] + (linear_trend * look_ahead_days)
-                
+
                 # Moving average prediction
                 ma_window = min(7, len(recent_delays))
                 ma_prediction = np.mean(recent_delays[-ma_window:])
-                
+
                 # Exponential smoothing
                 alpha = 0.3
                 exp_smooth = recent_delays[0]
                 for value in recent_delays[1:]:
                     exp_smooth = alpha * value + (1 - alpha) * exp_smooth
                 exp_prediction = exp_smooth
-                
+
                 # Ensemble prediction (weighted average)
                 ensemble_prediction = (0.4 * linear_prediction + 0.3 * ma_prediction + 0.3 * exp_prediction)
-                
+
                 # Calculate prediction confidence based on model agreement
                 predictions = [linear_prediction, ma_prediction, exp_prediction]
                 prediction_std = np.std(predictions)
                 prediction_mean = np.mean(predictions)
                 confidence = max(0.3, min(0.95, 1.0 - (prediction_std / (prediction_mean + 1e-8))))
-                
+
                 # Detect anomalies using statistical methods
                 z_scores = np.abs((recent_delays - np.mean(recent_delays)) / (np.std(recent_delays) + 1e-8))
                 anomaly_count = len(z_scores[z_scores > 2])
-                
+
                 model_info = {
                     "linear_trend": round(linear_trend, 3),
                     "ma_prediction": round(ma_prediction, 2),
@@ -672,7 +673,7 @@ class ControlTowerEngine:
                     "model_agreement": round(1.0 - (prediction_std / (prediction_mean + 1e-8)), 3),
                     "anomalies_detected": anomaly_count
                 }
-                
+
                 # Generate alerts based on ensemble prediction
                 if linear_trend > 0.5:
                     severity = "warning" if linear_trend < 1.0 else "critical"
@@ -694,7 +695,7 @@ class ControlTowerEngine:
                         "predicted_occurrence": (datetime.now(timezone.utc) + timedelta(days=look_ahead_days)).isoformat(),
                         "model_info": model_info
                     })
-                
+
                 if anomaly_count >= 2:
                     alerts.append({
                         "alert_type": "predictive_delay_anomaly",
@@ -710,35 +711,35 @@ class ControlTowerEngine:
                         ],
                         "predicted_occurrence": (datetime.now(timezone.utc) + timedelta(days=look_ahead_days // 2)).isoformat()
                     })
-        
+
         except Exception as e:
             logger_ct.error(f"Error in advanced delay prediction: {e}")
-        
+
         return {"alerts": alerts, "model_info": model_info}
 
     def _advanced_cost_prediction(self, data: pd.DataFrame, look_ahead_days: int) -> Dict[str, Any]:
         """Advanced cost prediction with volatility analysis."""
         alerts = []
         model_info = {}
-        
+
         try:
             recent_costs = data.tail(30)["cost"].values if len(data) >= 30 else data["cost"].values
-            
+
             if len(recent_costs) >= 3:
                 # Trend analysis
                 trend = np.polyfit(range(len(recent_costs)), recent_costs, 1)[0]
                 predicted_cost = recent_costs[-1] + (trend * look_ahead_days)
-                
+
                 # Volatility analysis
                 cost_volatility = np.std(recent_costs) / (np.mean(recent_costs) + 1e-8)
-                
+
                 # Seasonal pattern detection (if enough data)
                 seasonal_pattern = self._detect_seasonal_pattern(recent_costs)
-                
+
                 # Cost spike detection
                 cost_spike_threshold = np.mean(recent_costs) + 2 * np.std(recent_costs)
                 recent_spike = recent_costs[-1] > cost_spike_threshold
-                
+
                 model_info = {
                     "trend": round(trend, 2),
                     "volatility_cv": round(cost_volatility, 3),
@@ -746,11 +747,11 @@ class ControlTowerEngine:
                     "spike_detected": recent_spike,
                     "predicted_cost": round(predicted_cost, 2)
                 }
-                
+
                 if trend > 100:
                     severity = "warning" if trend < 500 else "critical"
                     confidence = min(0.85, 0.5 + (trend / 1000))
-                    
+
                     alerts.append({
                         "alert_type": "predictive_cost_increase",
                         "subtype": "trend_based",
@@ -770,7 +771,7 @@ class ControlTowerEngine:
                         "predicted_occurrence": (datetime.now(timezone.utc) + timedelta(days=look_ahead_days)).isoformat(),
                         "model_info": model_info
                     })
-                
+
                 if cost_volatility > 0.3:
                     alerts.append({
                         "alert_type": "predictive_cost_volatility",
@@ -786,37 +787,37 @@ class ControlTowerEngine:
                         ],
                         "predicted_occurrence": (datetime.now(timezone.utc) + timedelta(days=look_ahead_days)).isoformat()
                     })
-        
+
         except Exception as e:
             logger_ct.error(f"Error in advanced cost prediction: {e}")
-        
+
         return {"alerts": alerts, "model_info": model_info}
 
     def _advanced_quality_prediction(self, data: pd.DataFrame, look_ahead_days: int) -> Dict[str, Any]:
         """Advanced quality prediction with trend and pattern analysis."""
         alerts = []
         model_info = {}
-        
+
         try:
             recent_quality = data.tail(30)["quality_score"].values if len(data) >= 30 else data["quality_score"].values
-            
+
             if len(recent_quality) >= 3:
                 # Trend analysis
                 trend = np.polyfit(range(len(recent_quality)), recent_quality, 1)[0]
                 predicted_quality = recent_quality[-1] + (trend * look_ahead_days)
-                
+
                 # Quality degradation rate
                 quality_degradation = (recent_quality[0] - recent_quality[-1]) / len(recent_quality)
-                
+
                 # Statistical process control limits
                 mean_quality = np.mean(recent_quality)
                 std_quality = np.std(recent_quality)
                 lcl = mean_quality - 3 * std_quality  # Lower control limit
                 ucl = mean_quality + 3 * std_quality  # Upper control limit
-                
+
                 # Check for points outside control limits
                 out_of_control = len([q for q in recent_quality if q < lcl or q > ucl])
-                
+
                 model_info = {
                     "trend": round(trend, 4),
                     "degradation_rate": round(quality_degradation, 4),
@@ -825,11 +826,11 @@ class ControlTowerEngine:
                     "ucl": round(ucl, 3),
                     "out_of_control_points": out_of_control
                 }
-                
+
                 if trend < -0.01:
                     severity = "warning" if trend > -0.05 else "critical"
                     confidence = min(0.9, 0.5 + abs(trend) * 10)
-                    
+
                     alerts.append({
                         "alert_type": "predictive_quality_decline",
                         "subtype": "trend_based",
@@ -849,7 +850,7 @@ class ControlTowerEngine:
                         "predicted_occurrence": (datetime.now(timezone.utc) + timedelta(days=look_ahead_days)).isoformat(),
                         "model_info": model_info
                     })
-                
+
                 if out_of_control >= 2:
                     alerts.append({
                         "alert_type": "predictive_quality_spc",
@@ -865,20 +866,20 @@ class ControlTowerEngine:
                         ],
                         "predicted_occurrence": (datetime.now(timezone.utc) + timedelta(days=look_ahead_days // 2)).isoformat()
                     })
-        
+
         except Exception as e:
             logger_ct.error(f"Error in advanced quality prediction: {e}")
-        
+
         return {"alerts": alerts, "model_info": model_info}
 
     def _predict_supply_chain_risks(self, data: pd.DataFrame, look_ahead_days: int) -> Dict[str, Any]:
         """Predict supply chain risks using multiple indicators."""
         alerts = []
         model_info = {}
-        
+
         try:
             risk_factors = []
-            
+
             # Supplier concentration risk
             if "supplier" in data.columns:
                 supplier_counts = data["supplier"].value_counts()
@@ -890,7 +891,7 @@ class ControlTowerEngine:
                         "value": round(concentration_ratio, 3),
                         "description": f"Single supplier accounts for {concentration_ratio:.1%} of shipments"
                     })
-            
+
             # Geographic concentration risk
             if "region" in data.columns:
                 region_counts = data["region"].value_counts()
@@ -901,7 +902,7 @@ class ControlTowerEngine:
                         "value": len(region_counts),
                         "description": f"Low geographic diversity with only {len(region_counts)} regions"
                     })
-            
+
             # Demand-supply imbalance risk
             if "quantity" in data.columns and "delay_days" in data.columns:
                 delayed_ratio = len(data[data["delay_days"] > 0]) / len(data)
@@ -912,12 +913,12 @@ class ControlTowerEngine:
                         "value": round(delayed_ratio, 3),
                         "description": f"{delayed_ratio:.1%} of shipments experiencing delays"
                     })
-            
+
             model_info = {
                 "risk_factors_count": len(risk_factors),
                 "overall_risk_level": "high" if len(risk_factors) >= 2 else "medium" if len(risk_factors) == 1 else "low"
             }
-            
+
             if risk_factors:
                 alerts.append({
                     "alert_type": "predictive_supply_chain_risk",
@@ -936,38 +937,38 @@ class ControlTowerEngine:
                     "predicted_occurrence": (datetime.now(timezone.utc) + timedelta(days=look_ahead_days)).isoformat(),
                     "model_info": model_info
                 })
-        
+
         except Exception as e:
             logger_ct.error(f"Error in supply chain risk prediction: {e}")
-        
+
         return {"alerts": alerts, "model_info": model_info}
 
     def _predict_capacity_issues(self, data: pd.DataFrame, look_ahead_days: int) -> Dict[str, Any]:
         """Predict capacity and demand issues."""
         alerts = []
         model_info = {}
-        
+
         try:
             if "quantity" in data.columns:
                 recent_quantities = data.tail(30)["quantity"].values if len(data) >= 30 else data["quantity"].values
-                
+
                 # Demand trend analysis
                 if len(recent_quantities) >= 3:
                     demand_trend = np.polyfit(range(len(recent_quantities)), recent_quantities, 1)[0]
                     predicted_demand = recent_quantities[-1] + (demand_trend * look_ahead_days)
-                    
+
                     # Capacity utilization estimation (simplified)
                     avg_demand = np.mean(recent_quantities)
                     max_demand = np.max(recent_quantities)
                     utilization_rate = avg_demand / (max_demand + 1e-8)
-                    
+
                     model_info = {
                         "demand_trend": round(demand_trend, 2),
                         "predicted_demand": round(predicted_demand, 2),
                         "utilization_rate": round(utilization_rate, 3),
                         "demand_volatility": round(np.std(recent_quantities) / (np.mean(recent_quantities) + 1e-8), 3)
                     }
-                    
+
                     # Rapid demand growth alert
                     if demand_trend > 5 and utilization_rate > 0.8:
                         alerts.append({
@@ -988,7 +989,7 @@ class ControlTowerEngine:
                             "predicted_occurrence": (datetime.now(timezone.utc) + timedelta(days=look_ahead_days)).isoformat(),
                             "model_info": model_info
                         })
-                    
+
                     # Demand volatility alert
                     demand_volatility = np.std(recent_quantities) / (np.mean(recent_quantities) + 1e-8)
                     if demand_volatility > 0.4:
@@ -1006,26 +1007,26 @@ class ControlTowerEngine:
                             ],
                             "predicted_occurrence": (datetime.now(timezone.utc) + timedelta(days=look_ahead_days)).isoformat()
                         })
-        
+
         except Exception as e:
             logger_ct.error(f"Error in capacity issue prediction: {e}")
-        
+
         return {"alerts": alerts, "model_info": model_info}
 
     def _detect_seasonal_pattern(self, data: np.ndarray) -> str:
         """Detect seasonal patterns in time series data."""
         if len(data) < 12:
             return "insufficient_data"
-        
+
         # Simple autocorrelation for seasonality detection
         def autocorrelation(x, lag):
             return np.corrcoef(x[:-lag], x[lag:])[0, 1]
-        
+
         # Check for common seasonal patterns
         seasonal_lags = [7, 30, 90]  # Weekly, monthly, quarterly
         max_correlation = 0
         detected_pattern = "none"
-        
+
         for lag in seasonal_lags:
             if len(data) > lag * 2:
                 corr = abs(autocorrelation(data, lag))
@@ -1037,7 +1038,7 @@ class ControlTowerEngine:
                         detected_pattern = "monthly"
                     elif lag == 90:
                         detected_pattern = "quarterly"
-        
+
         return detected_pattern
 
     def _get_model_accuracy_metrics(self) -> Dict[str, float]:
@@ -1054,7 +1055,7 @@ class ControlTowerEngine:
         """
         Perform performance analytics on historical data.
         Calculates trends, benchmarks, and predictive analytics.
-        
+
         Args:
             historical_data: Historical supply chain data
         """
@@ -1064,12 +1065,12 @@ class ControlTowerEngine:
                 "benchmarking": {},
                 "predictive_insights": []
             }
-            
+
             # Trend analysis
             if "date" in historical_data.columns:
                 historical_data["date"] = pd.to_datetime(historical_data["date"])
                 historical_data = historical_data.sort_values("date")
-                
+
                 # Monthly trends
                 historical_data["month"] = historical_data["date"].dt.to_period("M")
                 monthly_data = historical_data.groupby("month").agg({
@@ -1077,20 +1078,20 @@ class ControlTowerEngine:
                     "cost": "sum",
                     "quantity": "sum"
                 }).reset_index()
-                
+
                 analytics["trend_analysis"]["monthly"] = {
                     "delay_trend": monthly_data["delay_days"].tolist(),
                     "cost_trend": monthly_data["cost"].tolist(),
                     "volume_trend": monthly_data["quantity"].tolist(),
                     "periods": [str(m) for m in monthly_data["month"].tolist()]
                 }
-                
+
                 # Trend direction
                 if len(monthly_data) >= 2:
                     recent_delay = monthly_data["delay_days"].iloc[-1]
                     previous_delay = monthly_data["delay_days"].iloc[-2]
                     analytics["trend_analysis"]["delay_direction"] = "increasing" if recent_delay > previous_delay else "decreasing"
-            
+
             # Benchmarking
             if "supplier" in historical_data.columns:
                 supplier_performance = historical_data.groupby("supplier").agg({
@@ -1098,23 +1099,23 @@ class ControlTowerEngine:
                     "quality_score": "mean",
                     "cost": "sum"
                 }).reset_index()
-                
+
                 analytics["benchmarking"]["supplier_rankings"] = {
                     "best_on_time": supplier_performance.nsmallest(5, "delay_days")["supplier"].tolist(),
                     "worst_on_time": supplier_performance.nlargest(5, "delay_days")["supplier"].tolist(),
                     "highest_quality": supplier_performance.nlargest(5, "quality_score")["supplier"].tolist()
                 }
-            
+
             # Predictive insights (simplified)
             if len(historical_data) > 30:
                 analytics["predictive_insights"] = self._generate_predictive_insights(historical_data)
-            
+
             return {
                 "status": "success",
                 "analytics": analytics,
                 "generated_at": datetime.now(timezone.utc).isoformat()
             }
-            
+
         except Exception as e:
             logger_ct.error(f"Error in performance analytics: {e}")
             return {"error": str(e)}
@@ -1122,7 +1123,7 @@ class ControlTowerEngine:
     def _generate_predictive_insights(self, data: pd.DataFrame) -> List[Dict[str, Any]]:
         """Generate predictive insights from data patterns."""
         insights = []
-        
+
         try:
             # Delay trend prediction
             if "delay_days" in data.columns:
@@ -1137,13 +1138,13 @@ class ControlTowerEngine:
                             "confidence": "medium",
                             "recommended_action": "Review supplier performance and lead times"
                         })
-            
+
             # Seasonality detection
             if "date" in data.columns and "quantity" in data.columns:
                 data["date"] = pd.to_datetime(data["date"])
                 data["day_of_week"] = data["date"].dt.dayofweek
                 dow_volume = data.groupby("day_of_week")["quantity"].mean()
-                
+
                 if dow_volume.max() / dow_volume.min() > 2:
                     peak_day = dow_volume.idxmax()
                     insights.append({
@@ -1153,17 +1154,17 @@ class ControlTowerEngine:
                         "confidence": "high",
                         "recommended_action": "Adjust capacity planning for weekly patterns"
                     })
-            
+
         except Exception as e:
             logger_ct.error(f"Error generating predictive insights: {e}")
-        
+
         return insights
 
     def executive_dashboard(self, monitoring_results: Dict[str, Any],
                           analytics: Dict[str, Any]) -> Dict[str, Any]:
         """
         Generate executive dashboard summary.
-        
+
         Args:
             monitoring_results: Current monitoring results
             analytics: Performance analytics
@@ -1181,12 +1182,12 @@ class ControlTowerEngine:
                 "trend_highlights": analytics.get("trend_analysis", {}),
                 "risk_summary": self._get_risk_summary(monitoring_results)
             }
-            
+
             return {
                 "status": "success",
                 "dashboard": dashboard
             }
-            
+
         except Exception as e:
             logger_ct.error(f"Error generating executive dashboard: {e}")
             return {"error": str(e)}
@@ -1195,10 +1196,10 @@ class ControlTowerEngine:
         """Calculate overall supply chain health score (0-100)."""
         try:
             score = 100.0
-            
+
             # Deduct for anomalies
             score -= len(monitoring_results.get("anomalies", [])) * 5
-            
+
             # Deduct for exceptions
             for exception in monitoring_results.get("exceptions", []):
                 if exception["severity"] == "critical":
@@ -1207,13 +1208,13 @@ class ControlTowerEngine:
                     score -= 10
                 else:
                     score -= 5
-            
+
             # Deduct for active critical alerts
             critical_alerts = len([a for a in self.active_alerts.values() if a["severity"] == "critical"])
             score -= critical_alerts * 10
-            
+
             return max(0, min(100, round(score, 1)))
-            
+
         except Exception as e:
             logger_ct.error(f"Error calculating health score: {e}")
             return 50.0
@@ -1247,7 +1248,7 @@ class ControlTowerEngine:
         """
         Generate enhanced streaming dashboard updates for real-time monitoring.
         Provides continuous updates for live dashboard visualization with advanced features.
-        
+
         Args:
             update_interval: Seconds between updates
         """
@@ -1316,13 +1317,13 @@ class ControlTowerEngine:
                     "offline_support": True
                 }
             }
-            
+
             return {
                 "status": "success",
                 "streaming_config": streaming_config,
                 "initialized_at": datetime.now(timezone.utc).isoformat()
             }
-            
+
         except Exception as e:
             logger_ct.error(f"Error configuring dashboard streaming: {e}")
             return {"error": str(e)}
@@ -1349,8 +1350,8 @@ class ControlTowerEngine:
                 "alerts": {
                     "total": len(self.active_alerts),
                     "by_severity": self._get_severity_breakdown(list(self.active_alerts.values())),
-                    "recent": sorted(list(self.active_alerts.values()), 
-                                   key=lambda x: x.get("created_at", ""), 
+                    "recent": sorted(list(self.active_alerts.values()),
+                                   key=lambda x: x.get("created_at", ""),
                                    reverse=True)[:10]
                 },
                 "performance_metrics": {
@@ -1378,12 +1379,12 @@ class ControlTowerEngine:
                     }
                 }
             }
-            
+
             return {
                 "status": "success",
                 "snapshot": snapshot
             }
-            
+
         except Exception as e:
             logger_ct.error(f"Error generating dashboard snapshot: {e}")
             return {"error": str(e)}

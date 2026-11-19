@@ -6,7 +6,8 @@ Two tables:
   agent_traces   — append-only log of every tool call made during an agent run
 """
 
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text, JSON
+from sqlalchemy import JSON, Column, DateTime, Float, Integer, String, Text
+
 from app.models.base import Base, _utcnow
 
 

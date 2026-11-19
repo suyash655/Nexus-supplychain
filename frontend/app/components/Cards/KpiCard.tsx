@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { animate, useReducedMotion } from "framer-motion";
+import { ArrowUpRight } from "lucide-react";
 import { SkeletonKPI } from "../feedback/Skeleton";
 
 export interface KpiCardProps {
@@ -16,187 +18,213 @@ export interface KpiCardProps {
   isLive?: boolean;
 }
 
+const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
+
 const formatTimestamp = (timestamp: string | Date | null): string => {
   if (!timestamp) return "";
   const date = typeof timestamp === "string" ? new Date(timestamp) : timestamp;
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  
+  const diffMins = Math.floor((Date.now() - date.getTime()) / 60000);
   if (diffMins < 1) return "Just now";
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
   return date.toLocaleDateString();
 };
 
-export const KpiCard = React.memo(function KpiCard({ label, value, delta, deltaDir, sub, onClick, loading, noData, timestamp, isLive }: KpiCardProps) {
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [isHovered, setIsHovered] = useState(false);
+/* "2,847" / "4.7d" / "94%" / "₹1.2L" -> { prefix, target, suffix, decimals, grouped } */
+function parseValue(text: string) {
+  const m = text.match(/^([^\d-]*)(-?[\d,]*\.?\d+)(.*)$/);
+  if (!m) return null;
+  const raw = m[2];
+  const target = parseFloat(raw.replace(/,/g, ""));
+  if (!Number.isFinite(target)) return null;
+  return {
+    prefix: m[1],
+    suffix: m[3],
+    target,
+    decimals: raw.includes(".") ? raw.split(".")[1].length : 0,
+    grouped: raw.includes(","),
+  };
+}
 
-  // Move useMemo before conditional returns to maintain hook order
-  const dotColor = useMemo(() =>
-    deltaDir === "up"
-      ? "#22C55E"
-      : deltaDir === "down"
-      ? "#FF4444"
-      : "#FF9500", [deltaDir]);
+/* Counts up once when the value appears or changes. The final frame is always the original text. */
+function AnimatedValue({ value }: { value: string | number }) {
+  const text = String(value);
+  const reduce = useReducedMotion();
+  const ref = useRef<HTMLSpanElement>(null);
 
-  const freshnessText = formatTimestamp(timestamp);
+  useIsoLayoutEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    node.textContent = text;
 
+    const parsed = parseValue(text);
+    if (!parsed || reduce) return;
+
+    const fmt = (n: number) =>
+      parsed.prefix +
+      (parsed.grouped
+        ? n.toLocaleString("en-US", {
+          minimumFractionDigits: parsed.decimals,
+          maximumFractionDigits: parsed.decimals,
+        })
+        : n.toFixed(parsed.decimals)) +
+      parsed.suffix;
+
+    node.textContent = fmt(0);
+    const controls = animate(0, parsed.target, {
+      duration: 1,
+      ease: [0.16, 1, 0.3, 1],
+      onUpdate: (v) => {
+        node.textContent = fmt(v);
+      },
+      onComplete: () => {
+        node.textContent = text;
+      },
+    });
+
+    return () => {
+      controls.stop();
+      node.textContent = text;
+    };
+  }, [text, reduce]);
+
+  return <span ref={ref}>{text}</span>;
+}
+
+export const KpiCard = React.memo(function KpiCard({
+  label,
+  value,
+  delta,
+  deltaDir,
+  sub,
+  onClick,
+  loading,
+  noData,
+  timestamp,
+  isLive,
+}: KpiCardProps) {
+  const [, setTick] = useState(0);
+
+  // Hooks stay above every conditional return to keep hook order stable
+  const deltaColor = useMemo(
+    () =>
+      deltaDir === "up"
+        ? "var(--color-ok)"
+        : deltaDir === "down"
+          ? "var(--color-danger)"
+          : "var(--color-text-2)",
+    [deltaDir]
+  );
+
+  // Re-render once a minute so "5m ago" labels stay accurate
   useEffect(() => {
-    if (isLive) {
-      const interval = setInterval(() => setCurrentTime(new Date()), 60000); // Update every minute
-      return () => clearInterval(interval);
-    }
-  }, [isLive]);
+    if (!timestamp) return;
+    const id = setInterval(() => setTick((t) => t + 1), 60000);
+    return () => clearInterval(id);
+  }, [timestamp]);
 
-  if (loading) {
-    return <SkeletonKPI />;
-  }
+  if (loading) return <SkeletonKPI />;
+
+  const interactive = typeof onClick === "function";
+  const interactiveProps = interactive
+    ? {
+      role: "button" as const,
+      tabIndex: 0,
+      onClick,
+      onKeyDown: (e: React.KeyboardEvent) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick?.();
+        }
+      },
+    }
+    : {};
 
   if (noData) {
     return (
       <div
         className="kpi-card"
-        style={{
-          background: "var(--color-surface)",
-          border: "1px solid var(--color-border)",
-          borderRadius: 6,
-          padding: 20,
-          cursor: onClick ? "pointer" : "default",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: 96,
-        }}
-        onClick={onClick}
+        style={{ alignItems: "center", justifyContent: "center", cursor: interactive ? "pointer" : "default" }}
+        {...interactiveProps}
       >
-        <div style={{ fontSize: 13, color: "var(--color-text-3)", fontStyle: "italic" }}>
-          No data yet
-        </div>
+        <div style={{ fontSize: 13, color: "var(--color-text-3)" }}>No data yet</div>
       </div>
     );
   }
 
+  const freshnessText = formatTimestamp(timestamp ?? null);
+  const hasBadge = !!isLive || !!freshnessText;
+
   return (
     <div
       className="kpi-card"
-      style={{
-        background: isHovered && onClick ? "var(--color-surface-2)" : "var(--color-surface)",
-        border: isHovered && onClick ? "1px solid var(--color-accent)" : "1px solid var(--color-border)",
-        borderRadius: 6,
-        padding: 20,
-        cursor: onClick ? "pointer" : "default",
-        position: "relative",
-        overflow: "hidden",
-        willChange: "transform",
-        transition: "all 0.2s ease",
-      }}
-      onClick={onClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      style={{ position: "relative", cursor: interactive ? "pointer" : "default" }}
+      {...interactiveProps}
     >
-      {/* Live pulse indicator */}
-      {isLive && (
-        <div style={{
-          position: "absolute",
-          top: 16,
-          right: 16,
-          display: "flex",
-          alignItems: "center",
-          gap: 4,
-        }}>
-          <div style={{
-            width: 6,
-            height: 6,
-            borderRadius: "50%",
-            background: "var(--color-ok)",
-            animation: "pulse 2s infinite",
-          }} />
-          <span style={{ fontSize: 10, color: "var(--color-ok)", fontWeight: 500 }}>LIVE</span>
-        </div>
-      )}
-
-      {/* Freshness timestamp */}
-      {freshnessText && !isLive && (
-        <div style={{
-          position: "absolute",
-          top: 16,
-          right: 16,
-          fontSize: 10,
-          color: "var(--color-text-3)",
-          fontWeight: 400,
-        }}>
-          {freshnessText}
-        </div>
-      )}
-
-      <div
-        style={{
-          fontSize: 11,
-          fontWeight: 500,
-          textTransform: "uppercase",
-          letterSpacing: "0.05em",
-          color: "var(--color-text-2)",
-          marginBottom: 8,
-        }}
-      >
-        {label}
-      </div>
-      <div
-        style={{
-          fontSize: 32,
-          fontWeight: 700,
-          color: "var(--color-text-1)",
-          lineHeight: 1.1,
-          letterSpacing: "-0.02em",
-        }}
-      >
-        {value}
-      </div>
-      {delta && (
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 4,
-            marginTop: 8,
-            fontSize: 11,
-            fontWeight: 500,
-            color: dotColor,
-          }}
-        >
+      {isLive ? (
+        <div style={{ position: "absolute", top: 16, right: 16, display: "flex", alignItems: "center", gap: 6 }}>
           <span
+            aria-hidden="true"
             style={{
               width: 6,
               height: 6,
               borderRadius: "50%",
-              background: dotColor,
-              flexShrink: 0,
+              background: "var(--color-ok)",
+              animation: "pulse 2s ease-in-out infinite",
             }}
           />
-          {delta}
+          <span style={{ fontSize: 10, letterSpacing: "0.1em", color: "var(--color-ok)", fontWeight: 500 }}>
+            LIVE
+          </span>
         </div>
-      )}
-      {sub && (
-        <div style={{ marginTop: 8, fontSize: 11, color: "var(--color-text-3)" }}>
-          {sub}
+      ) : freshnessText ? (
+        <div style={{ position: "absolute", top: 16, right: 16, fontSize: 10, color: "var(--color-text-3)" }}>
+          {freshnessText}
+        </div>
+      ) : null}
+
+      <div>
+        <div className="kpi-label" style={{ paddingRight: hasBadge ? 64 : 0 }}>
+          {label}
+        </div>
+        <div className="kpi-value">
+          <AnimatedValue value={value} />
+        </div>
+      </div>
+
+      {(delta || sub) && (
+        <div style={{ marginTop: 12, paddingRight: interactive ? 20 : 0 }}>
+          {delta && (
+            <div className="kpi-delta" style={{ color: deltaColor, marginTop: 0 }}>
+              <span
+                aria-hidden="true"
+                style={{ width: 6, height: 6, borderRadius: "50%", background: deltaColor, flexShrink: 0 }}
+              />
+              {delta}
+            </div>
+          )}
+          {sub && (
+            <div
+              style={{
+                marginTop: delta ? 6 : 0,
+                fontSize: 12,
+                color: "var(--color-text-3)",
+                overflowWrap: "anywhere",
+              }}
+            >
+              {sub}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Click affordance indicator */}
-      {onClick && (
-        <div style={{
-          position: "absolute",
-          bottom: 16,
-          right: 16,
-          opacity: isHovered ? 1 : 0,
-          transition: "opacity 0.2s ease",
-        }}>
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M4.5 4.5L7.5 7.5M7.5 4.5L4.5 7.5" stroke="var(--color-text-3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-        </div>
+      {interactive && (
+        <ArrowUpRight
+          className="kpi-go"
+          size={14}
+          aria-hidden="true"
+          style={{ position: "absolute", right: 16, bottom: 16, color: "var(--color-text-3)" }}
+        />
       )}
     </div>
   );
