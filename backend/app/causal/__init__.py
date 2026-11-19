@@ -23,8 +23,8 @@ This is structurally-weighted risk propagation — a well-established, honest
 technique. It is valuable and useful. It is not Bayesian causal inference.
 """
 
-from typing import Dict, Any, List, Optional, Set, Tuple
 from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import numpy as np  # type: ignore
 

@@ -6,17 +6,17 @@ positioning optimization, perishable inventory management, and obsolescence risk
 """
 
 import logging
-import pandas as pd
-from typing import Dict, Any, Optional
 from datetime import datetime, timezone
+from typing import Dict, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+import pandas as pd
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_db, require_auth
-from app.features.planning.inventory.engine import InventoryOptimizationEngine
 from app.core.orchestrator import _load_dataframe
+from app.features.planning.inventory.engine import InventoryOptimizationEngine
 
 logger_io = logging.getLogger("nexus.inventory_optimization")
 
@@ -64,7 +64,7 @@ def initialize_optimization(
         df = _load_dataframe()
         if df.empty:
             raise HTTPException(status_code=400, detail="No data available. Upload data first.")
-        
+
         result = inventory_engine.initialize(df)
         return result
     except Exception as e:
@@ -85,14 +85,14 @@ def calculate_safety_stock(
         df = _load_dataframe()
         if df.empty:
             raise HTTPException(status_code=400, detail="No data available. Upload data first.")
-        
+
         # Simulate demand data from current dataset
         demand_data = df.copy()
         if "date" not in demand_data.columns:
             demand_data["date"] = pd.date_range(start=datetime.now(timezone.utc), periods=len(demand_data), freq="D")
         if "quantity" not in demand_data.columns:
             demand_data["quantity"] = demand_data.get("quantity", 100)
-        
+
         result = inventory_engine.calculate_safety_stock(
             demand_data,
             request.lead_times,
@@ -118,14 +118,14 @@ def calculate_dynamic_safety_stock(
         df = _load_dataframe()
         if df.empty:
             raise HTTPException(status_code=400, detail="No data available. Upload data first.")
-        
+
         # Simulate demand data from current dataset
         demand_data = df.copy()
         if "date" not in demand_data.columns:
             demand_data["date"] = pd.date_range(start=datetime.now(timezone.utc), periods=len(demand_data), freq="D")
         if "quantity" not in demand_data.columns:
             demand_data["quantity"] = demand_data.get("quantity", 100)
-        
+
         result = inventory_engine.dynamic_safety_stock_adjustment(
             demand_data,
             request.lead_times,
@@ -151,12 +151,12 @@ def calculate_eoq(
         df = _load_dataframe()
         if df.empty:
             raise HTTPException(status_code=400, detail="No data available. Upload data first.")
-        
+
         # Simulate demand data
         demand_data = df.copy()
         if "quantity" not in demand_data.columns:
             demand_data["quantity"] = 100
-        
+
         # Default cost parameters
         costs = {}
         for sku in demand_data.get("sku", ["default"]):
@@ -164,7 +164,7 @@ def calculate_eoq(
                 "holding_cost": 0.25,
                 "ordering_cost": 50.0
             }
-        
+
         result = inventory_engine.economic_order_quantity(demand_data, costs)
         return result
     except Exception as e:
@@ -186,7 +186,7 @@ def optimize_positioning(
         df = _load_dataframe()
         if df.empty:
             raise HTTPException(status_code=400, detail="No data available. Upload data first.")
-        
+
         # Create network data from current dataset
         network_data = df.copy()
         if "echelon" not in network_data.columns:
@@ -195,12 +195,12 @@ def optimize_positioning(
             network_data["location"] = "default_location"
         if "capacity" not in network_data.columns:
             network_data["capacity"] = 10000
-        
+
         # Provide default demand forecast if not provided
         if not request.demand_forecast:
             skus = network_data.get("sku", ["default"]).unique() if "sku" in network_data else ["default"]
             request.demand_forecast = {sku: [100, 110, 105, 120, 115] for sku in skus}
-        
+
         # Provide default cost parameters if not provided
         if not request.cost_parameters:
             locations = network_data.get("location", ["default"]).unique() if "location" in network_data else ["default"]
@@ -212,12 +212,12 @@ def optimize_positioning(
                 }
                 for loc in locations
             }
-        
+
         # Provide default lead times if not provided
         if not request.lead_times:
             locations = network_data.get("location", ["default"]).unique() if "location" in network_data else ["default"]
-            request.lead_times = {loc: 7 for loc in locations}
-        
+            request.lead_times = dict.fromkeys(locations, 7)
+
         result = inventory_engine.inventory_positioning_optimization(
             network_data,
             request.demand_forecast,
@@ -243,17 +243,17 @@ def manage_perishable_inventory(
         df = _load_dataframe()
         if df.empty:
             raise HTTPException(status_code=400, detail="No data available. Upload data first.")
-        
+
         # Create inventory data
         inventory_data = df.copy()
         if "quantity" not in inventory_data.columns:
             inventory_data["quantity"] = 100
-        
+
         # Provide default demand forecast if not provided
         if not request.demand_forecast:
             skus = inventory_data.get("sku", ["default"]).unique() if "sku" in inventory_data else ["default"]
             request.demand_forecast = {sku: [100, 110, 105, 120, 115] for sku in skus}
-        
+
         # Provide default shelf life parameters if not provided
         if not request.shelf_life_params:
             skus = inventory_data.get("sku", ["default"]).unique() if "sku" in inventory_data else ["default"]
@@ -265,7 +265,7 @@ def manage_perishable_inventory(
                 }
                 for sku in skus
             }
-        
+
         result = inventory_engine.perishable_inventory_management(
             inventory_data,
             request.demand_forecast,
@@ -290,7 +290,7 @@ def model_obsolescence_risk(
         df = _load_dataframe()
         if df.empty:
             raise HTTPException(status_code=400, detail="No data available. Upload data first.")
-        
+
         # Create inventory data
         inventory_data = df.copy()
         if "quantity" not in inventory_data.columns:
@@ -299,14 +299,14 @@ def model_obsolescence_risk(
             inventory_data["unit_cost"] = 10.0
         if "age_days" not in inventory_data.columns:
             inventory_data["age_days"] = 90
-        
+
         # Create demand history
         demand_history = df.copy()
         if "date" not in demand_history.columns:
             demand_history["date"] = pd.date_range(start=datetime.now(timezone.utc), periods=len(demand_history), freq="D")
         if "quantity" not in demand_history.columns:
             demand_history["quantity"] = 100
-        
+
         # Provide default lifecycle parameters if not provided
         if not request.product_lifecycle_params:
             skus = inventory_data.get("sku", ["default"]).unique() if "sku" in inventory_data else ["default"]
@@ -320,7 +320,7 @@ def model_obsolescence_risk(
                 }
                 for sku in skus
             }
-        
+
         result = inventory_engine.obsolescence_risk_modeling(
             inventory_data,
             demand_history,
@@ -355,21 +355,21 @@ def optimize_service_levels(
         df = _load_dataframe()
         if df.empty:
             raise HTTPException(status_code=400, detail="No data available. Upload data first.")
-        
+
         # Create sample data if not provided
         skus = df.get("sku", ["SKU-001"]).unique() if "sku" in df else ["SKU-001"]
-        
+
         if not request.current_service_levels:
-            request.current_service_levels = {sku: 0.95 for sku in skus}
+            request.current_service_levels = dict.fromkeys(skus, 0.95)
         if not request.inventory_costs:
-            request.inventory_costs = {sku: 1.0 for sku in skus}
+            request.inventory_costs = dict.fromkeys(skus, 1.0)
         if not request.stockout_costs:
-            request.stockout_costs = {sku: 10.0 for sku in skus}
+            request.stockout_costs = dict.fromkeys(skus, 10.0)
         if not request.demand_std_dev:
-            request.demand_std_dev = {sku: 10.0 for sku in skus}
+            request.demand_std_dev = dict.fromkeys(skus, 10.0)
         if not request.annual_demand:
-            request.annual_demand = {sku: 1000.0 for sku in skus}
-        
+            request.annual_demand = dict.fromkeys(skus, 1000.0)
+
         result = inventory_engine.service_level_optimization(
             request.current_service_levels,
             request.inventory_costs,
@@ -395,7 +395,7 @@ def optimize_multi_echelon(
         df = _load_dataframe()
         if df.empty:
             raise HTTPException(status_code=400, detail="No data available. Upload data first.")
-        
+
         # Create network data
         network_data = df.copy()
         if "echelon" not in network_data.columns:
@@ -404,11 +404,11 @@ def optimize_multi_echelon(
             network_data["location"] = "default_location"
         if "capacity" not in network_data.columns:
             network_data["capacity"] = 10000
-        
+
         # Create demand forecast
         skus = network_data.get("sku", ["default"]).unique() if "sku" in network_data else ["default"]
         demand_forecast = {sku: [100, 110, 105, 120, 115] for sku in skus}
-        
+
         result = inventory_engine.multi_echelon_optimization(network_data, demand_forecast)
         return result
     except Exception as e:
@@ -428,7 +428,7 @@ def perform_abc_analysis(
         df = _load_dataframe()
         if df.empty:
             raise HTTPException(status_code=400, detail="No data available. Upload data first.")
-        
+
         # Create inventory data with required columns
         inventory_data = df.copy()
         if "quantity" not in inventory_data.columns:
@@ -437,7 +437,7 @@ def perform_abc_analysis(
             inventory_data["unit_cost"] = 10.0
         if "sku" not in inventory_data.columns:
             inventory_data["sku"] = ["SKU-" + str(i) for i in range(len(inventory_data))]
-        
+
         result = inventory_engine.abc_analysis(inventory_data)
         return result
     except Exception as e:
@@ -457,7 +457,7 @@ def analyze_turnover(
         df = _load_dataframe()
         if df.empty:
             raise HTTPException(status_code=400, detail="No data available. Upload data first.")
-        
+
         # Create inventory data
         inventory_data = df.copy()
         if "current_inventory" not in inventory_data.columns:
@@ -466,7 +466,7 @@ def analyze_turnover(
             inventory_data["sku"] = ["SKU-" + str(i) for i in range(len(inventory_data))]
         if "warehouse" not in inventory_data.columns:
             inventory_data["warehouse"] = "WH-001"
-        
+
         # Create sales data
         sales_data = df.copy()
         if "cost_of_goods_sold" not in sales_data.columns:
@@ -475,7 +475,7 @@ def analyze_turnover(
             sales_data["sku"] = inventory_data["sku"]
         if "warehouse" not in sales_data.columns:
             sales_data["warehouse"] = "WH-001"
-        
+
         result = inventory_engine.inventory_turnover_analysis(inventory_data, sales_data)
         return result
     except Exception as e:

@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def _safe_str(val):
     if val is None:
         return None

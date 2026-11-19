@@ -1,5 +1,7 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey, JSON, Index
+from sqlalchemy import JSON, Column, DateTime, Float, Index, Integer, String, Text
+
 from app.models.base import Base, _utcnow
+
 
 class SupplyData(Base):
     __tablename__ = "supply_data"

@@ -12,22 +12,20 @@ Endpoints:
 """
 
 import logging
-from typing import Optional, List, Dict, Any
 from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Body  # type: ignore
+from fastapi import APIRouter, Depends, Query  # type: ignore
 from pydantic import BaseModel, Field  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
-from sqlalchemy import and_, or_  # type: ignore
 
 from app.core.dependencies import get_db, require_auth  # type: ignore
-from app.models import SupplyData  # type: ignore
 from app.core.errors import (  # type: ignore
+    InvalidOperationError,
     NotFoundError,
     ValidationError,
-    InvalidOperationError,
-    ConflictError,
 )
+from app.models import SupplyData  # type: ignore
 
 logger = logging.getLogger("nexus.data_management")
 
@@ -90,33 +88,33 @@ def update_record(
 ):
     """
     Update a specific supply chain record.
-    
+
     Supports partial updates - only provided fields will be updated.
     """
     # Validate that record exists
     record = db.query(SupplyData).filter(SupplyData.id == record_id).first()
     if not record:
         raise NotFoundError(f"Record with ID {record_id} not found")
-    
+
     # Build update dictionary with only non-None fields
     update_dict = {}
     for field, value in update_data.model_dump(exclude_unset=True).items():
         update_dict[field] = value
-    
+
     if not update_dict:
         raise ValidationError("No valid fields provided for update")
-    
+
     try:
         # Apply updates
         for field, value in update_dict.items():
             setattr(record, field, value)
-        
+
         record.updated_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(record)
-        
+
         logger.info("[NEXUS] Record %d updated by user %s", record_id, user.get("id", "unknown"))
-        
+
         return {
             "status": "success",
             "record_id": record_id,
@@ -151,13 +149,13 @@ def delete_record(
     record = db.query(SupplyData).filter(SupplyData.id == record_id).first()
     if not record:
         raise NotFoundError(f"Record with ID {record_id} not found")
-    
+
     try:
         db.delete(record)
         db.commit()
-        
+
         logger.info("[NEXUS] Record %d deleted by user %s", record_id, user.get("id", "unknown"))
-        
+
         return {
             "status": "success",
             "record_id": record_id,
@@ -177,30 +175,30 @@ def bulk_delete_records(
 ):
     """
     Bulk delete multiple supply chain records.
-    
+
     Returns summary of deleted records count and any failures.
     """
     # Validate that records exist
     records = db.query(SupplyData).filter(SupplyData.id.in_(request.record_ids)).all()
     found_ids = {r.id for r in records}
     missing_ids = set(request.record_ids) - found_ids
-    
+
     if not records:
         raise NotFoundError("No records found with the provided IDs")
-    
+
     try:
         deleted_count = 0
         for record in records:
             db.delete(record)
             deleted_count += 1
-        
+
         db.commit()
-        
+
         logger.info(
             "[NEXUS] Bulk delete: %d records deleted by user %s (missing: %d)",
             deleted_count, user.get("id", "unknown"), len(missing_ids)
         )
-        
+
         return {
             "status": "success",
             "deleted_count": deleted_count,
@@ -235,7 +233,7 @@ def search_records(
     """
     # Build query with filters
     query = db.query(SupplyData)
-    
+
     if supplier:
         query = query.filter(SupplyData.supplier.ilike(f"%{supplier}%"))
     if sku:
@@ -254,13 +252,13 @@ def search_records(
         query = query.filter(SupplyData.cost >= min_cost)
     if max_cost is not None:
         query = query.filter(SupplyData.cost <= max_cost)
-    
+
     # Get total count
     total = query.count()
-    
+
     # Get paginated results
     records = query.order_by(SupplyData.id.desc()).offset(skip).limit(limit).all()
-    
+
     return {
         "data": [
             {
@@ -293,13 +291,13 @@ def bulk_update_records(
 ):
     """
     Bulk update records matching filters.
-    
+
     Allows updating multiple records that match specific criteria.
     Limited to max_records per operation to prevent excessive updates.
     """
     # Build query with filters
     query = db.query(SupplyData)
-    
+
     filters = request.filters
     if filters.get("supplier"):
         query = query.filter(SupplyData.supplier.ilike(f"%{filters['supplier']}%"))
@@ -309,21 +307,21 @@ def bulk_update_records(
         query = query.filter(SupplyData.region.ilike(f"%{filters['region']}%"))
     if filters.get("category"):
         query = query.filter(SupplyData.category.ilike(f"%{filters['category']}%"))
-    
+
     # Get matching records
     records = query.limit(request.max_records).all()
-    
+
     if not records:
         raise NotFoundError("No records found matching the provided filters")
-    
+
     # Build update dictionary
     update_dict = {}
     for field, value in request.updates.model_dump(exclude_unset=True).items():
         update_dict[field] = value
-    
+
     if not update_dict:
         raise ValidationError("No valid fields provided for update")
-    
+
     try:
         updated_count = 0
         for record in records:
@@ -331,14 +329,14 @@ def bulk_update_records(
                 setattr(record, field, value)
             record.updated_at = datetime.now(timezone.utc)
             updated_count += 1
-        
+
         db.commit()
-        
+
         logger.info(
             "[NEXUS] Bulk update: %d records updated by user %s",
             updated_count, user.get("id", "unknown")
         )
-        
+
         return {
             "status": "success",
             "updated_count": updated_count,

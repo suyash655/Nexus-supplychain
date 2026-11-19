@@ -4,19 +4,15 @@ NEXUS — Remaining Routers: Pipeline, Risk Propagation, Scheduler, System
 Groups the remaining smaller route domains to avoid an explosion of tiny files.
 """
 
-import json
-from datetime import datetime, timezone
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Query, Depends, HTTPException  # type: ignore
+from fastapi import APIRouter, Depends, HTTPException, Query  # type: ignore
 from pydantic import BaseModel, Field  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 
 from app.core.dependencies import get_db, require_auth  # type: ignore
-from app.models import SupplyData, SupplierProfile, RiskEvent, AnalysisResult, UploadHistory, WorldEvent  # type: ignore
-from app.core.orchestrator import get_analysis_result, _load_dataframe, save_analysis_result  # type: ignore
-from app.core.errors import EngineUnavailableError, NoDataError  # type: ignore
-
+from app.core.orchestrator import _load_dataframe, get_analysis_result  # type: ignore
+from app.models import AnalysisResult, RiskEvent, SupplierProfile, SupplyData, UploadHistory, WorldEvent  # type: ignore
 
 # ── Request schemas ────────────────────────────────────────────────────────────────────
 
@@ -190,6 +186,7 @@ scheduler_router = APIRouter(prefix="/scheduler", tags=["Scheduler"])
 @scheduler_router.post("/jobs")
 def create_scheduled_job(job: ScheduledJobRequest, db: Session = Depends(get_db)):
     import uuid
+
     from app.main import engines  # type: ignore
     from app.models import ScheduledIngestion  # type: ignore
     job_id = str(uuid.uuid4())[:8]
@@ -275,29 +272,30 @@ system_router = APIRouter(prefix="/system", tags=["System"])
 @system_router.get("/health")
 def health_status(db: Session = Depends(get_db)):
     """NEXUS platform health status."""
+    from sqlalchemy import func  # type: ignore
+
     from app.auth import User  # type: ignore
     from app.connectors import ConnectorConfig  # type: ignore
-    from app.pipeline import PipelineRun  # type: ignore
     from app.core.config import settings  # type: ignore
-    from sqlalchemy import func  # type: ignore
-    
+    from app.pipeline import PipelineRun  # type: ignore
+
     # Handle potentially missing tables gracefully
     try:
         latest = db.query(AnalysisResult).order_by(AnalysisResult.created_at.desc()).first()
         last_analysis = latest.created_at.isoformat() if latest else None
     except Exception:
         last_analysis = None
-    
+
     try:
         user_count = db.query(User).count()
     except Exception:
         user_count = 0
-    
+
     try:
         connector_count = db.query(ConnectorConfig).count()
     except Exception:
         connector_count = 0
-    
+
     try:
         pipeline_count = db.query(PipelineRun).count()
     except Exception:
@@ -310,7 +308,7 @@ def health_status(db: Session = Depends(get_db)):
         supply_row_count = db.query(func.count(SupplyData.id)).scalar() or 0
     except Exception:
         supply_row_count = 0
-    
+
     from app.core.orchestrator import is_analyzing as _is_analyzing  # type: ignore
     analysis_running = _is_analyzing()
     # has_real_data is true as soon as rows exist in supply_data OR analysis is saved

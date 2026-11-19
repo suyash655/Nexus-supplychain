@@ -1,15 +1,17 @@
-from typing import Optional, Dict, Any
 from datetime import datetime, timezone
+from typing import Any, Dict, Optional
+
 from sqlalchemy.orm import Session  # type: ignore
 
-from app.models.auth import User, RefreshToken  # type: ignore
 from app.core.config import settings  # type: ignore
+from app.models.auth import RefreshToken, User  # type: ignore
+
 from .utils import (
-    hash_password,
-    verify_password,
     create_access_token,
     decode_token,
     generate_refresh_token,
+    hash_password,
+    verify_password,
     verify_refresh_token_hash,
 )
 
