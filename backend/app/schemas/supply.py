@@ -1,6 +1,8 @@
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 from pydantic import BaseModel, Field, field_validator
+
 
 class SupplyDataSchema(BaseModel):
     supplier: Optional[str] = Field("Unknown Source", json_schema_extra={"example": "Globex Corp"})

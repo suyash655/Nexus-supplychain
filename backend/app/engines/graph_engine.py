@@ -7,11 +7,12 @@ Uses networkx for graph operations.
 
 import logging
 import warnings
-import networkx as nx  # type: ignore
-import pandas as pd  # type: ignore
-import numpy as np  # type: ignore
-from typing import Dict, List, Any, Optional
 from collections import defaultdict
+from typing import Any, Dict, List
+
+import networkx as nx  # type: ignore
+import numpy as np  # type: ignore
+import pandas as pd  # type: ignore
 
 # Suppress NetworkX constant input warning
 warnings.filterwarnings("ignore", category=UserWarning, message=".*ConstantInputWarning.*")
@@ -30,7 +31,7 @@ class SupplyChainGraph:
         """Build supply chain graph from transaction data."""
         import time as _time
         start_total = _time.time()
-        
+
         self.G.clear()
 
         # Add supplier nodes
@@ -487,7 +488,7 @@ class SupplyChainGraph:
 
     def deep_tier_inference(self, df: "pd.DataFrame | None" = None) -> Dict[str, Any]:
         """Infer probable Tier 3+ relationships using real data patterns.
-        
+
         Algorithm:
         - Identifies suppliers that share SKUs (implicit dependency).
         - Uses co-occurrence frequency and cost correlation as a proxy for
@@ -699,10 +700,10 @@ class SupplyChainGraph:
             new_score = n.get("betweenness_score", 0.0)
             if new_score > 0.01 and (old_score == 0 or new_score / old_score > 1.5):
                 newly_critical.append({
-                    "node_id": nid, "name": n["name"], "type": n["type"], 
+                    "node_id": nid, "name": n["name"], "type": n["type"],
                     "metric": "betweenness", "old": old_score, "new": new_score
                 })
-        
+
         for n in post_centrality["pagerank"]:
             nid = n["node_id"]
             if any(c["node_id"] == nid for c in newly_critical):
@@ -711,21 +712,21 @@ class SupplyChainGraph:
             new_score = n.get("pagerank_score", 0.0)
             if new_score > 0.05 and (old_score == 0 or new_score / old_score > 1.5):
                 newly_critical.append({
-                    "node_id": nid, "name": n["name"], "type": n["type"], 
+                    "node_id": nid, "name": n["name"], "type": n["type"],
                     "metric": "pagerank", "old": old_score, "new": new_score
                 })
 
         # 5. Unreachable SKUs
         unreachable_skus = []
         skus_pre = [n for n, d in self.G.nodes(data=True) if d.get("type") == "sku"]
-        
+
         for sku in skus_pre:
             if sku not in g_copy:
                 continue
             in_edges = [u for u, v in g_copy.in_edges(sku) if g_copy.nodes[u].get("type") == "supplier"]
             if not in_edges:
                 unreachable_skus.append({
-                    "node_id": sku, 
+                    "node_id": sku,
                     "name": g_copy.nodes[sku].get("name", sku)
                 })
 

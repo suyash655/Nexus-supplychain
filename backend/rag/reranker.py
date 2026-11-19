@@ -13,7 +13,6 @@ Falls back to RRF order if cross-encoder is unavailable.
 """
 
 import logging
-from typing import List
 
 logger = logging.getLogger("nexus.rag.reranker")
 
@@ -36,7 +35,6 @@ def rerank(query: str, chunks: list, top_k: int = 3) -> list:
         return chunks
 
     try:
-        from sentence_transformers import CrossEncoder  # type: ignore
 
         model = _get_cross_encoder()
         pairs = [(query, c.text) for c in chunks]

@@ -1,10 +1,11 @@
-import pytest
-from fastapi.testclient import TestClient
 import json
+from contextlib import asynccontextmanager
+
 import numpy as np
+from fastapi.testclient import TestClient
 
 from app.main import SafeJSONResponse, app
-from contextlib import asynccontextmanager
+
 
 @asynccontextmanager
 async def mock_lifespan(app):
