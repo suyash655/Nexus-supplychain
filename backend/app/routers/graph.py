@@ -2,13 +2,13 @@
 NEXUS — Graph Router
 """
 
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Query, Depends, HTTPException  # type: ignore
+from fastapi import APIRouter, Depends, HTTPException, Query  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 
 from app.core.dependencies import get_db, require_auth  # type: ignore
-from app.core.orchestrator import get_analysis_result, _load_dataframe  # type: ignore
+from app.core.orchestrator import _load_dataframe, get_analysis_result  # type: ignore
 from app.engines.graph_engine import SupplyChainGraph  # type: ignore
 
 router = APIRouter(prefix="/graph", tags=["Graph"])
@@ -297,7 +297,7 @@ def simulate_failure(
     user: dict = Depends(require_auth),
 ):
     """
-    Simulate failure of a specific node, returning a diff of network centrality 
+    Simulate failure of a specific node, returning a diff of network centrality
     and cascading effects. Stores the run in the database.
     """
     node_id = body.get("node_id")
@@ -313,8 +313,9 @@ def simulate_failure(
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
 
-    from app.models.supply import ScenarioRun
     import uuid
+
+    from app.models.supply import ScenarioRun
     run_id = str(uuid.uuid4())
     run = ScenarioRun(
         run_id=run_id,

@@ -7,11 +7,11 @@ DAG-based pipeline orchestration with built-in data quality checks and lineage.
 import hashlib
 import time
 from datetime import datetime, timezone
-from typing import Dict, Any, List, Optional, Callable
+from typing import Any, Callable, Dict, List, Optional
 
-import pandas as pd  # type: ignore
 import numpy as np  # type: ignore
-from sqlalchemy import Column, Integer, String, DateTime, JSON, Float, Text, Boolean  # type: ignore
+import pandas as pd  # type: ignore
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, Integer, String, Text  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 
 from app.models import Base  # type: ignore

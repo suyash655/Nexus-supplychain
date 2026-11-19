@@ -1,28 +1,37 @@
 "use client";
 
-import { useState, useRef, useEffect, memo } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Search, Bell, LogOut, X } from "lucide-react";
+import { LogOut, Search, X } from "lucide-react";
 
-// Breadcrumb map: pathname → [Section, Page]
+// Breadcrumb map: pathname -> [Section, Page]
 const BREADCRUMBS: Record<string, [string, string]> = {
-  "/dashboard":  ["Overview",     "Command Center"],
-  "/upload":     ["Overview",     "Upload Data"],
-  "/analytics":  ["Intelligence", "Analytics"],
+  "/dashboard": ["Overview", "Command Center"],
+  "/upload": ["Overview", "Upload Data"],
+  "/upload/map": ["Overview", "Map Columns"],
+  "/analytics": ["Intelligence", "Analytics"],
   "/analytics-reports": ["Intelligence", "Analytics Reports"],
-  "/graph":      ["Intelligence", "Graph Network"],
-  "/copilot":    ["Intelligence", "AI Co-Pilot"],
-  "/causal":     ["Intelligence", "Risk Propagation"],
-  "/xai":        ["Intelligence", "Explainability"],
-  "/sop":        ["Planning",     "S&OP Executive"],
-  "/ibp-unified": ["Planning",    "Unified IBP"],
-  "/connectors": ["Operations",   "Connectors"],
-  "/pipeline":   ["Operations",   "Pipeline"],
-  "/export":     ["Operations",   "Export"],
+  "/graph": ["Intelligence", "Graph Network"],
+  "/copilot": ["Intelligence", "AI Co-Pilot"],
+  "/causal": ["Intelligence", "Risk Propagation"],
+  "/xai": ["Intelligence", "Explainability"],
+  "/sop": ["Planning", "S&OP Executive"],
+  "/ibp-unified": ["Planning", "Unified IBP"],
+  "/connectors": ["Operations", "Connectors"],
+  "/pipeline": ["Operations", "Pipeline"],
+  "/export": ["Operations", "Export"],
   "/control-tower": ["Operations", "Control Tower"],
+  "/mitigation": ["Operations", "Mitigation Loop"],
+  "/agent-traces": ["Operations", "Agent Traces"],
 };
 
-const T = "cubic-bezier(0.16, 1, 0.3, 1)";
+function resolveCrumb(pathname: string): [string, string] {
+  if (BREADCRUMBS[pathname]) return BREADCRUMBS[pathname];
+  const match = Object.keys(BREADCRUMBS)
+    .filter((k) => pathname.startsWith(k + "/"))
+    .sort((a, b) => b.length - a.length)[0];
+  return match ? BREADCRUMBS[match] : ["", "NEXUS"];
+}
 
 const SEARCH_ACTIONS = [
   { label: "Command Center", keywords: "dashboard overview home kpi", path: "/dashboard" },
@@ -39,67 +48,78 @@ const SEARCH_ACTIONS = [
   { label: "Pipeline", keywords: "pipeline quality lineage history", path: "/pipeline" },
   { label: "Export", keywords: "export tableau powerbi csv json", path: "/export" },
   { label: "Control Tower", keywords: "control tower alerts incidents operations", path: "/control-tower" },
+  { label: "Mitigation Loop", keywords: "mitigation agent approval plan", path: "/mitigation" },
+  { label: "Agent Traces", keywords: "agent traces langgraph logs", path: "/agent-traces" },
 ];
 
+interface StoredUser {
+  full_name?: string;
+  username?: string;
+  email?: string;
+}
+
 export default memo(function TopNav() {
-  const router   = useRouter();
+  const router = useRouter();
   const pathname = usePathname();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [isMac, setIsMac] = useState(false);
+  const [user, setUser] = useState<StoredUser | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
-  
-  const [user] = useState<{ full_name?: string; username?: string; email?: string } | null>(() => {
-    if (typeof window === "undefined") return null;
+
+  /* Read browser-only state after mount so server and client markup match */
+  useEffect(() => {
+    setIsMac(/Mac|iPhone|iPad/i.test(navigator.platform));
     try {
-      const u = localStorage.getItem("nexus_user");
-      return u ? JSON.parse(u) : null;
+      const raw = localStorage.getItem("nexus_user");
+      if (raw) setUser(JSON.parse(raw));
     } catch {
-      return null;
+      /* ignore malformed stored user */
     }
-  });
+  }, []);
 
   // Close search when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const onDown = (event: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
         setSearchOpen(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
   }, []);
 
-  // Handle keyboard shortcut for search
+  // Keyboard shortcut: Ctrl/Cmd + K, Escape to close
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === "k") {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
         setSearchOpen(true);
+        setActiveIndex(0);
       }
-      if (event.key === "Escape" && searchOpen) {
-        setSearchOpen(false);
-      }
+      if (event.key === "Escape") setSearchOpen(false);
     };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [searchOpen]);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-  };
-
-  const quickActions = SEARCH_ACTIONS.slice(0, 4);
   const normalizedQuery = searchQuery.trim().toLowerCase();
   const searchResults = normalizedQuery
-    ? SEARCH_ACTIONS.filter((action) =>
-        `${action.label} ${action.keywords}`.toLowerCase().includes(normalizedQuery)
-      ).slice(0, 8)
-    : quickActions;
+    ? SEARCH_ACTIONS.filter((a) =>
+      `${a.label} ${a.keywords}`.toLowerCase().includes(normalizedQuery)
+    ).slice(0, 8)
+    : SEARCH_ACTIONS.slice(0, 5);
+
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setSearchQuery("");
+    setActiveIndex(0);
+  };
 
   const navigateTo = (path: string) => {
     router.push(path);
-    setSearchOpen(false);
-    setSearchQuery("");
+    closeSearch();
   };
 
   const handleLogout = () => {
@@ -110,96 +130,84 @@ export default memo(function TopNav() {
     router.push("/login");
   };
 
-  const [section, page] = BREADCRUMBS[pathname] ?? ["", "Nexus"];
+  const [section, page] = resolveCrumb(pathname);
 
   const initials = user?.full_name
-    ? user.full_name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()
+    ? user.full_name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase()
     : user?.username?.slice(0, 2).toUpperCase() ?? "NX";
 
   return (
-    <header
-      style={{
-        height:          "var(--topnav-height)",
-        display:         "flex",
-        alignItems:      "center",
-        justifyContent:  "space-between",
-        padding:         "0 24px",
-        borderBottom:    "1px solid var(--color-border)",
-        background:      "var(--color-bg)",
-        position:        "sticky",
-        top:             0,
-        zIndex:          50,
-        flexShrink:      0,
-      }}
-    >
-      {/* ── Left: breadcrumb ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+    <header className="topnav">
+      {/* Left: breadcrumb (hidden on phones to leave room for search) */}
+      <div className="hidden min-w-0 items-center gap-2 sm:flex">
         {section && (
           <>
             <span style={{ fontSize: 12, color: "var(--color-text-3)", whiteSpace: "nowrap" }}>
               {section}
             </span>
-            <span style={{ fontSize: 12, color: "var(--color-border-hi)" }}>/</span>
+            <span aria-hidden="true" style={{ fontSize: 12, color: "var(--color-border-hi)" }}>
+              /
+            </span>
           </>
         )}
-        <span style={{ fontSize: 12, color: "var(--color-text-2)", fontWeight: 500, whiteSpace: "nowrap" }}>
+        <span
+          aria-current="page"
+          style={{ fontSize: 12, color: "var(--color-text-1)", fontWeight: 500, whiteSpace: "nowrap" }}
+        >
           {page}
         </span>
       </div>
 
-      {/* ── Centre: search ── */}
-      <div ref={searchRef} style={{ position: "relative" }}>
-        <div
-          tabIndex={0}
-          role="button"
-          aria-label="Search (⌘K)"
-          onClick={() => setSearchOpen(true)}
-          className="topnav-search"
+      {/* Centre: search */}
+      <div ref={searchRef} className="relative min-w-0 flex-1 sm:w-[360px] sm:flex-none lg:w-[420px]">
+        <button
+          type="button"
+          className="topnav-search w-full"
+          aria-label="Search pages"
+          aria-haspopup="dialog"
+          aria-expanded={searchOpen}
+          onClick={() => {
+            setSearchOpen(true);
+            setActiveIndex(0);
+          }}
         >
-          <Search size={13} />
-          <span style={{ flex: 1 }}>Search…</span>
-          <kbd
-            style={{
-              fontSize:     10,
-              fontFamily:   "var(--font-mono)",
-              padding:      "1px 5px",
-              background:   "var(--color-surface-2)",
-              borderRadius: 3,
-              color:        "var(--color-text-3)",
-            }}
-          >
-            ⌘K
-          </kbd>
-        </div>
+          <Search size={14} aria-hidden="true" />
+          <span style={{ flex: 1, textAlign: "left" }}>Search…</span>
+          <kbd aria-hidden="true">{isMac ? "⌘K" : "Ctrl K"}</kbd>
+        </button>
 
-        {/* Search Dropdown */}
         {searchOpen && (
           <div
-            style={{
-              position: "absolute",
-              top: "calc(100% + 8px)",
-              left: 0,
-              right: 0,
-              background: "var(--color-surface)",
-              border: "1px solid var(--color-border)",
-              borderRadius: "var(--radius-md)",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-              zIndex: 100,
-              padding: 12,
-              minWidth: 320,
-            }}
+            role="dialog"
+            aria-label="Search pages"
+            className="menu-panel fixed left-4 right-4 top-[calc(var(--topnav-height)+8px)] z-[100] p-3 md:absolute md:left-0 md:right-0 md:top-[calc(100%+8px)] md:min-w-[360px]"
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-              <Search size={16} style={{ color: "var(--color-text-3)" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <Search size={15} aria-hidden="true" style={{ color: "var(--color-text-3)" }} />
               <input
                 autoFocus
                 type="text"
-                placeholder="Search pages, suppliers, metrics..."
+                aria-label="Search pages"
+                placeholder="Search pages and tools"
                 value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setActiveIndex(0);
+                }}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && searchResults[0]) {
-                    navigateTo(searchResults[0].path);
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setActiveIndex((i) => Math.min(i + 1, searchResults.length - 1));
+                  } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setActiveIndex((i) => Math.max(i - 1, 0));
+                  } else if (e.key === "Enter" && searchResults[activeIndex]) {
+                    navigateTo(searchResults[activeIndex].path);
                   }
                 }}
                 style={{
@@ -207,44 +215,50 @@ export default memo(function TopNav() {
                   background: "transparent",
                   border: "none",
                   color: "var(--color-text-1)",
-                  fontSize: 13,
+                  fontSize: 14,
                   outline: "none",
-                  fontFamily: "var(--font-sans)",
+                  minWidth: 0,
                 }}
               />
               <button
-                onClick={() => {
-                  setSearchOpen(false);
-                  setSearchQuery("");
-                }}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "var(--color-text-3)",
-                  cursor: "pointer",
-                  padding: 4,
-                  borderRadius: 4,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
+                type="button"
+                onClick={closeSearch}
+                aria-label="Close search"
+                className="topnav-btn"
+                style={{ width: 28, height: 28 }}
               >
                 <X size={14} />
               </button>
             </div>
 
-            <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: 8, marginBottom: 8 }}>
-              <div style={{ fontSize: 11, color: "var(--color-text-3)", marginBottom: 8, fontWeight: 500 }}>
-                QUICK ACTIONS
+            <div style={{ borderTop: "1px solid var(--color-border)", paddingTop: 8 }}>
+              <div className="text-micro" style={{ padding: "0 4px 6px" }}>
+                {normalizedQuery ? "Results" : "Quick actions"}
               </div>
-              {searchResults.map((action) => (
+              {searchResults.map((action, i) => (
                 <button
                   key={action.path}
-                  onClick={() => navigateTo(action.path)}
+                  type="button"
                   className="search-result-btn"
+                  onClick={() => navigateTo(action.path)}
+                  onMouseEnter={() => setActiveIndex(i)}
+                  style={
+                    i === activeIndex
+                      ? { background: "rgba(140, 170, 220, 0.09)" }
+                      : undefined
+                  }
                 >
-                  <span style={{ fontSize: 14 }}>→</span>
-                  {action.label}
+                  <span>{action.label}</span>
+                  <span
+                    style={{
+                      marginLeft: "auto",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 11,
+                      color: "var(--color-text-3)",
+                    }}
+                  >
+                    {action.path}
+                  </span>
                 </button>
               ))}
               {searchResults.length === 0 && (
@@ -254,59 +268,46 @@ export default memo(function TopNav() {
               )}
             </div>
 
-            {searchQuery.length > 2 && (
-              <div style={{ fontSize: 11, color: "var(--color-text-3)", textAlign: "center", padding: 8 }}>
-                Press Enter to open the first match
-              </div>
-            )}
+            <div
+              className="max-md:hidden"
+              style={{
+                marginTop: 8,
+                paddingTop: 8,
+                borderTop: "1px solid var(--color-border)",
+                fontSize: 11,
+                color: "var(--color-text-3)",
+                display: "flex",
+                gap: 16,
+              }}
+            >
+              <span>↑↓ to move</span>
+              <span>Enter to open</span>
+              <span>Esc to close</span>
+            </div>
           </div>
         )}
       </div>
 
-      {/* ── Right: actions ── */}
-      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-        {/* Notifications */}
+      {/* Right: account actions */}
+      <div className="topnav-actions">
         <button
-          aria-label="Notifications"
-          className="topnav-btn"
-        >
-          <Bell size={15} />
-          {/* Notification dot */}
-          <span
-            style={{
-              position:     "absolute",
-              top:          6,
-              right:        6,
-              width:        5,
-              height:       5,
-              borderRadius: "50%",
-              background:   "var(--color-danger)",
-              border:       "1px solid var(--color-bg)",
-            }}
-          />
-        </button>
-
-        {/* Logout */}
-        <button
+          type="button"
           onClick={handleLogout}
           aria-label="Log out"
+          title="Log out"
           className="topnav-btn"
         >
-          <LogOut size={15} />
+          <LogOut size={16} strokeWidth={1.6} />
         </button>
 
-        {/* Divider */}
         <div
-          style={{
-            width:      1,
-            height:     20,
-            background: "var(--color-border)",
-            margin:     "0 4px",
-          }}
+          aria-hidden="true"
+          style={{ width: 1, height: 20, background: "var(--color-border)", margin: "0 4px" }}
         />
 
-        {/* Avatar */}
         <div
+          role="img"
+          aria-label={user?.email ?? "Account"}
           title={user?.email ?? "Account"}
           className="topnav-avatar"
         >

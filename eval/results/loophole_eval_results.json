@@ -1,0 +1,69 @@
+{
+  "timestamp": "2026-11-18T16:16:29.199506+00:00",
+  "overall_status": "PASS",
+  "results_matrix": [
+    {
+      "component": "Risk Scoring",
+      "subsystem": "Critical Bottleneck",
+      "required_expected": "Titan Heavy Logistics rank #1, score >= 70.0, tier='critical'",
+      "obtained": "Rank #1, score=81.5, tier='critical'",
+      "status": "PASS"
+    },
+    {
+      "component": "Risk Scoring",
+      "subsystem": "Elevated Exposure",
+      "required_expected": "Vanguard Assemblies score in [40.0, 70.0), tier='elevated'",
+      "obtained": "Score=43.9, tier='elevated'",
+      "status": "PASS"
+    },
+    {
+      "component": "Risk Scoring",
+      "subsystem": "Stable Fleet Baseline",
+      "required_expected": "10/10 stable suppliers score < 35.0, tier='stable'",
+      "obtained": "10/10 stable (max score: 0.7)",
+      "status": "PASS"
+    },
+    {
+      "component": "Loophole Defense",
+      "subsystem": "Single-row & Zero-variance",
+      "required_expected": "Zero NaN/Inf on 1-row, 0-variance, & special character vendors",
+      "obtained": "Solo=1.5, Const=0.2, Spec=6.0 (all finite)",
+      "status": "PASS"
+    },
+    {
+      "component": "Anomaly Detection",
+      "subsystem": "Isolation Forest Outliers",
+      "required_expected": "Flag >= 80% injected outliers with fleet anomaly rate 0.3%-25.0%",
+      "obtained": "Detected 5/5 injected outliers, fleet rate=19.2%",
+      "status": "PASS"
+    },
+    {
+      "component": "Graph Engine",
+      "subsystem": "Disruption Cascade",
+      "required_expected": "Disabling Titan disconnects sole SKU-CRITICAL-999 (affected >= 2)",
+      "obtained": "Titan affected=3 (SKU-CRITICAL-999 severed), Vendor-01 affected=12",
+      "status": "PASS"
+    },
+    {
+      "component": "Forecasting",
+      "subsystem": "Holt-Winters Extrapolation",
+      "required_expected": "Holt-Winters used; Titan predicted delay > 10d, Vendor-01 <= 1d",
+      "obtained": "Method='holt_winters', Titan p50=37.5d, Vendor-01 p50=0.0d",
+      "status": "PASS"
+    },
+    {
+      "component": "Mitigation Agent",
+      "subsystem": "Plan Schema & Approval Gate",
+      "required_expected": "Valid plan schema; unauthorized roles (viewer/analyst) blocked",
+      "obtained": "Plan action=dual_source, viewer blocked=True, analyst blocked=True",
+      "status": "PASS"
+    },
+    {
+      "component": "SafeJSONResponse",
+      "subsystem": "NaN/Inf Sanitization",
+      "required_expected": "Clean serialization with zero raw NaN/Inf in JSON response",
+      "obtained": "Serialized 61149 bytes, zero NaN/Inf detected",
+      "status": "PASS"
+    }
+  ]
+}

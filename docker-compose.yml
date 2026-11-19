@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   # ── Backend API ──
   api:
@@ -9,18 +7,17 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=sqlite:///app/nexus.db
-      - SECRET_KEY=${SECRET_KEY:-nexus-production-secret-key}
-      - AWS_REGION=${AWS_REGION:-us-east-1}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
-      - BEDROCK_MODEL_ID=${BEDROCK_MODEL_ID:-amazon.nova-lite-v1:0}
+      - DATABASE_URL=sqlite:///app/data/synchain.db
+      - SECRET_KEY=${SECRET_KEY:-nexus-dev-secret-change-in-production}
+      - DEBUG=${DEBUG:-true}
+      - ALLOW_DEMO=${ALLOW_DEMO:-true}
+      - LLM_PROVIDER=${LLM_PROVIDER:-offline}
       - CORS_ORIGINS=http://localhost:3000
     volumes:
-      - api_data:/app
+      - api_data:/app/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/system/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -28,7 +25,7 @@ services:
   # ── Frontend ──
   frontend:
     build:
-      context: .
+      context: ./frontend
       dockerfile: Dockerfile.frontend
     ports:
       - "3000:3000"

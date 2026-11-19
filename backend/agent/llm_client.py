@@ -1,6 +1,6 @@
-from groq import Groq
+from config import GEMINI_API_KEY, GROQ_API_KEY
 from google import genai
-from config import GROQ_API_KEY, GEMINI_API_KEY
+from groq import Groq
 
 groq_client = Groq(api_key=GROQ_API_KEY)
 gemini_client = genai.Client(api_key=GEMINI_API_KEY)

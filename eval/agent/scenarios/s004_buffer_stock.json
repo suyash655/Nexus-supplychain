@@ -1,0 +1,12 @@
+{
+  "scenario_id": "s004",
+  "title": "Moderate reliability drop requiring inventory buffering",
+  "supplier": "Centaur Fasteners",
+  "risk_score": 52.0,
+  "metrics": {
+    "avg_delay": 4.5,
+    "defect_rate": 0.02
+  },
+  "expected_action_type": "buffer_inventory",
+  "expected_urgency": "medium"
+}
