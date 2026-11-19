@@ -7,12 +7,11 @@ Centralized auth guard + DB session to remove duplication across routers.
 import os
 from typing import Optional
 
-from fastapi import Depends, HTTPException, Header  # type: ignore
+from fastapi import Depends, Header, HTTPException  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 
-from app.core.database import SessionLocal  # type: ignore
 from app.auth.utils import decode_token  # type: ignore
-
+from app.core.database import SessionLocal  # type: ignore
 
 # ── Database dependency ──
 
@@ -36,7 +35,9 @@ async def get_db_for_tenant(tenant_id: str, db: Session = Depends(get_db)):
     impossible through this value.
     """
     import uuid
+
     from sqlalchemy import text
+
     from app.core.config import settings
 
     # ── Input validation: reject anything that is not a well-formed UUID ──

@@ -11,12 +11,11 @@ Usage:
 Collection is idempotent: re-ingesting the same file replaces its chunks.
 """
 
-import os
-import re
-import logging
 import hashlib
+import logging
+import re
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 logger = logging.getLogger("nexus.rag.ingest")
 
@@ -94,7 +93,7 @@ def _read_pdf(path: Path) -> str:
     """Extract text from a PDF file using pypdf."""
     if not HAS_PYPDF:
         raise ImportError("pypdf is not installed — cannot read PDF files")
-    
+
     try:
         reader = PdfReader(path)
         text_parts = []
@@ -147,7 +146,7 @@ def ingest_file(path: Path, collection=None, embedder=None) -> int:
         text = _read_pdf(path)
     else:
         text = path.read_text(encoding="utf-8", errors="replace")
-    
+
     doc_name = path.name
     doc_id   = _file_hash(path)
 

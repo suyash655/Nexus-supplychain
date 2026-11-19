@@ -1,339 +1,427 @@
 "use client";
+
+import { useId, useState } from "react";
+import { useReducedMotion } from "framer-motion";
 import {
-    BarChart,
-    Bar,
-    LineChart,
-    Line,
-    PieChart,
-    Pie,
-    Cell,
-    AreaChart,
     Area,
+    AreaChart,
+    Bar,
+    BarChart,
+    CartesianGrid,
+    Cell,
+    Line,
+    LineChart,
+    Pie,
+    PieChart,
+    ResponsiveContainer,
+    Tooltip,
     XAxis,
     YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-    Legend,
 } from "recharts";
-import React, { useState, useMemo } from "react";
+import { CHART, NEUTRAL_PALETTE, formatCompact, tierColor } from "@/lib/ui";
 
-/* ── Palette-only colour sequence for data series ── */
-const COLORS = [
-    "var(--chart-1)",
-    "var(--chart-2)",
-    "var(--chart-3)",
-    "var(--chart-4)",
-    "var(--chart-5)",
-];
+type Row = Record<string, any>;
+type Fmt = (v: number) => string;
 
-const tooltipStyle = {
-    backgroundColor: "var(--color-surface)",
-    border: "1px solid var(--color-border)",
-    borderRadius: "8px",
-    color: "var(--color-text-1)",
-    fontSize: "12px",
-    boxShadow: "none",
-};
+const AXIS_TICK = { fill: CHART.axis, fontSize: 11 };
+const defaultFmt: Fmt = (v) => formatCompact(v);
+const labelFor = (key: string) => key.replace(/_/g, " ");
 
-const AXIS_TICK   = { fill: "var(--color-text-3)", fontSize: 11 };
-const AXIS_LINE   = { stroke: "var(--color-border)" };
-const GRID_STROKE = "var(--color-border)";
+/* ── Tooltip ── */
+function ChartTooltip({ active, payload, label, formatValue }: any) {
+    if (!active || !payload?.length) return null;
+    const fmt: Fmt = formatValue ?? defaultFmt;
+    return (
+        <div
+            style={{
+                minWidth: 130,
+                padding: "8px 12px",
+                fontSize: 12,
+                background: "rgba(10,17,29,0.92)",
+                border: "1px solid #2a3b5a",
+                borderRadius: 10,
+                backdropFilter: "blur(10px)",
+            }}
+        >
+            {label != null && label !== "" && (
+                <div style={{ marginBottom: 6, color: CHART.text }}>{label}</div>
+            )}
+            {payload.map((p: any, i: number) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, color: "#f3efe4" }}>
+                    <span
+                        style={{
+                            width: 8,
+                            height: 8,
+                            flexShrink: 0,
+                            borderRadius: 2,
+                            background: p.payload?._fill ?? p.payload?.fill ?? p.color ?? p.fill,
+                        }}
+                    />
+                    <span style={{ color: CHART.text }}>{p.name}</span>
+                    <span style={{ marginLeft: "auto", paddingLeft: 12, fontVariantNumeric: "tabular-nums" }}>
+                        {typeof p.value === "number" ? fmt(p.value) : p.value}
+                    </span>
+                </div>
+            ))}
+        </div>
+    );
+}
 
-type ChartDatum = Record<string, any>;
-
-/* ============================
-   BAR CHART
-   ============================ */
-export const SynBarChart = React.memo(function SynBarChart({
-    data,
-    dataKey,
-    nameKey = "name",
-    color = "var(--chart-1)",
-    height = 300,
-}: {
-    data: ChartDatum[];
+/* ── Bar ── */
+interface BarProps {
+    data: Row[];
     dataKey: string;
     nameKey?: string;
     color?: string;
     height?: number;
-}) {
+    colorBy?: (row: Row) => string;
+    formatValue?: Fmt;
+    label?: string;
+    [extra: string]: unknown;
+}
+
+export function SynBarChart({
+    data,
+    dataKey,
+    nameKey = "name",
+    color = CHART.blue,
+    height = 220,
+    colorBy,
+    formatValue = defaultFmt,
+    label,
+}: BarProps) {
+    const reduce = useReducedMotion();
+    const rows = data.map((r) => ({ ...r, _fill: colorBy ? colorBy(r) : color }));
+
     return (
         <ResponsiveContainer width="100%" height={height}>
-            <BarChart data={data} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} vertical={false} />
-                <XAxis dataKey={nameKey} tick={AXIS_TICK} axisLine={AXIS_LINE} tickLine={false} />
-                <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "var(--color-surface-2)" }} />
-                <Bar dataKey={dataKey} fill={color} radius={[2, 2, 0, 0]} />
+            <BarChart data={rows} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap="22%">
+                <CartesianGrid vertical={false} stroke={CHART.grid} strokeDasharray="3 3" />
+                <XAxis
+                    dataKey={nameKey}
+                    tick={AXIS_TICK}
+                    tickLine={false}
+                    axisLine={{ stroke: CHART.grid }}
+                    interval={rows.length <= 10 ? 0 : "preserveStartEnd"}
+                />
+                <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} width={44} tickFormatter={formatValue} />
+                <Tooltip
+                    cursor={{ fill: "rgba(140,170,220,0.06)" }}
+                    content={<ChartTooltip formatValue={formatValue} />}
+                />
+                <Bar
+                    dataKey={dataKey}
+                    name={label ?? labelFor(dataKey)}
+                    radius={[5, 5, 0, 0]}
+                    maxBarSize={56}
+                    isAnimationActive={!reduce}
+                    animationDuration={800}
+                    activeBar={{ fillOpacity: 1 }}
+                >
+                    {rows.map((r, i) => (
+                        <Cell key={i} fill={r._fill} fillOpacity={0.82} />
+                    ))}
+                </Bar>
             </BarChart>
         </ResponsiveContainer>
     );
-});
+}
 
-/* ============================
-   LINE CHART
-   ============================ */
-export const SynLineChart = React.memo(function SynLineChart({
-    data,
-    lines,
-    xKey = "name",
-    height = 300,
-}: {
-    data: ChartDatum[];
-    lines: { key: string; color?: string; name?: string }[];
-    xKey?: string;
-    height?: number;
-}) {
-    return (
-        <ResponsiveContainer width="100%" height={height}>
-            <LineChart data={data} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} vertical={false} />
-                <XAxis dataKey={xKey} tick={AXIS_TICK} axisLine={AXIS_LINE} tickLine={false} />
-                <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Legend wrapperStyle={{ fontSize: 11, color: "var(--color-text-2)" }} />
-                {lines.map((line, i) => (
-                    <Line
-                        key={line.key}
-                        type="monotone"
-                        dataKey={line.key}
-                        stroke={line.color || COLORS[i % COLORS.length]}
-                        strokeWidth={2}
-                        dot={{ r: 2, fill: line.color || COLORS[i % COLORS.length] }}
-                        activeDot={{ r: 3 }}
-                        name={line.name || line.key}
-                    />
-                ))}
-            </LineChart>
-        </ResponsiveContainer>
-    );
-});
-
-/* ============================
-   AREA CHART
-   ============================ */
-export const SynAreaChart = React.memo(function SynAreaChart({
-    data,
-    dataKey,
-    xKey = "name",
-    color = "var(--chart-1)",
-    height = 300,
-}: {
-    data: ChartDatum[];
+/* ── Area ── */
+interface AreaProps {
+    data: Row[];
     dataKey: string;
     xKey?: string;
     color?: string;
     height?: number;
-}) {
-    // Generate a safe gradId without var() wrappers
-    const safeColor = color.replace(/[^a-zA-Z0-9-]/g, "");
-    const gradId = `grad-${dataKey}-${safeColor}`;
+    formatValue?: Fmt;
+    label?: string;
+    [extra: string]: unknown;
+}
+
+export function SynAreaChart({
+    data,
+    dataKey,
+    xKey = "period",
+    color = CHART.blue,
+    height = 200,
+    formatValue = defaultFmt,
+    label,
+}: AreaProps) {
+    const reduce = useReducedMotion();
+    const gid = "g" + useId().replace(/[^a-zA-Z0-9]/g, "");
+
     return (
         <ResponsiveContainer width="100%" height={height}>
-            <AreaChart data={data} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
+            <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                 <defs>
-                    <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%"   stopColor={color} stopOpacity={0.12} />
-                        <stop offset="100%" stopColor={color} stopOpacity={0}    />
+                    <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={color} stopOpacity={0.3} />
+                        <stop offset="100%" stopColor={color} stopOpacity={0} />
                     </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke={GRID_STROKE} vertical={false} />
-                <XAxis dataKey={xKey} tick={AXIS_TICK} axisLine={AXIS_LINE} tickLine={false} />
-                <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} />
-                <Tooltip contentStyle={tooltipStyle} />
+                <CartesianGrid vertical={false} stroke={CHART.grid} strokeDasharray="3 3" />
+                <XAxis dataKey={xKey} tick={AXIS_TICK} tickLine={false} axisLine={{ stroke: CHART.grid }} />
+                <YAxis
+                    tick={AXIS_TICK}
+                    tickLine={false}
+                    axisLine={false}
+                    width={44}
+                    domain={[0, "auto"]}
+                    tickFormatter={formatValue}
+                />
+                <Tooltip
+                    cursor={{ stroke: CHART.axis, strokeDasharray: "3 3" }}
+                    content={<ChartTooltip formatValue={formatValue} />}
+                />
                 <Area
                     type="monotone"
                     dataKey={dataKey}
+                    name={label ?? labelFor(dataKey)}
                     stroke={color}
-                    fill={`url(#${gradId})`}
                     strokeWidth={2}
+                    fill={`url(#${gid})`}
                     dot={false}
+                    activeDot={{ r: 4, fill: color, stroke: "#060a12", strokeWidth: 2 }}
+                    isAnimationActive={!reduce}
+                    animationDuration={900}
                 />
             </AreaChart>
         </ResponsiveContainer>
     );
-});
+}
 
-/* ============================
-   PIE CHART
-   ============================ */
-const MAX_SLICES = 6;
+/* ── Line ── */
+const LINE_PALETTE = [CHART.blue, CHART.brass, CHART.sage, CHART.amber, CHART.red];
 
-function CustomPieTooltip({ active, payload }: any) {
-    if (!active || !payload?.length) return null;
-    const d = payload[0];
+interface LineSpec {
+    key: string;
+    color?: string;
+    name?: string;
+    axis?: "left" | "right";
+    dashed?: boolean;
+}
+
+interface LineProps {
+    data: Row[];
+    lines: LineSpec[];
+    xKey?: string;
+    height?: number;
+    formatValue?: Fmt;
+    [extra: string]: unknown;
+}
+
+/* Guards against near-black series colours that vanish on the navy background */
+function visibleColor(c: string | undefined, i: number): string {
+    const fallback = LINE_PALETTE[i % LINE_PALETTE.length];
+    if (!c) return fallback;
+    const m = /^#?([0-9a-f]{6})$/i.exec(c.trim());
+    if (!m) return c;
+    const n = parseInt(m[1], 16);
+    const lum = 0.2126 * ((n >> 16) & 255) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255);
+    return lum < 60 ? fallback : c;
+}
+
+export function SynLineChart({
+    data,
+    lines,
+    xKey = "name",
+    height = 220,
+    formatValue = defaultFmt,
+}: LineProps) {
+    const reduce = useReducedMotion();
+    const specs = lines.map((l, i) => ({ ...l, color: visibleColor(l.color, i) }));
+    const hasRight = specs.some((l) => l.axis === "right");
+    const showDots = data.length <= 12;
+
     return (
-        <div style={{
-            background: "var(--color-surface)",
-            border: "1px solid var(--color-border)",
-            borderRadius: 8,
-            padding: "8px 12px",
-            fontSize: 12,
-            color: "var(--color-text-1)",
-        }}>
-            <div style={{ fontWeight: 600, marginBottom: 4, color: d.payload?.fill || "var(--chart-1)" }}>
-                {d.name}
-            </div>
-            <div style={{ color: "var(--color-text-2)" }}>
-                {typeof d.value === "number" ? d.value.toLocaleString() : d.value}
-                {d.payload?.percent != null && (
-                    <span style={{ color: "var(--color-text-3)", marginLeft: 6 }}>
-                        ({(d.payload.percent * 100).toFixed(1)}%)
-                    </span>
-                )}
-            </div>
-            {d.payload?._groupedItems && (
-                <div style={{ marginTop: 6, paddingTop: 6, borderTop: "1px solid var(--color-border)", fontSize: 11, color: "var(--color-text-3)" }}>
-                    Includes: {d.payload._groupedItems.join(", ")}
-                </div>
+        <div>
+            <ResponsiveContainer width="100%" height={height}>
+                <LineChart data={data} margin={{ top: 8, right: hasRight ? 0 : 8, bottom: 0, left: 0 }}>
+                    <CartesianGrid vertical={false} stroke={CHART.grid} strokeDasharray="3 3" />
+                    <XAxis dataKey={xKey} tick={AXIS_TICK} tickLine={false} axisLine={{ stroke: CHART.grid }} />
+                    <YAxis
+                        yAxisId="left"
+                        tick={AXIS_TICK}
+                        tickLine={false}
+                        axisLine={false}
+                        width={44}
+                        domain={["auto", "auto"]}
+                        tickFormatter={formatValue}
+                    />
+                    {hasRight && (
+                        <YAxis
+                            yAxisId="right"
+                            orientation="right"
+                            tick={AXIS_TICK}
+                            tickLine={false}
+                            axisLine={false}
+                            width={40}
+                            domain={["auto", "auto"]}
+                            tickFormatter={formatValue}
+                        />
+                    )}
+                    <Tooltip
+                        cursor={{ stroke: CHART.axis, strokeDasharray: "3 3" }}
+                        content={<ChartTooltip formatValue={formatValue} />}
+                    />
+                    {specs.map((l) => (
+                        <Line
+                            key={l.key}
+                            yAxisId={l.axis === "right" ? "right" : "left"}
+                            type="monotone"
+                            dataKey={l.key}
+                            name={l.name ?? labelFor(l.key)}
+                            stroke={l.color}
+                            strokeWidth={2}
+                            strokeDasharray={l.dashed ? "5 4" : undefined}
+                            dot={showDots ? { r: 3, fill: l.color, strokeWidth: 0 } : false}
+                            activeDot={{ r: 5, fill: l.color, stroke: "#060a12", strokeWidth: 2 }}
+                            isAnimationActive={!reduce}
+                            animationDuration={900}
+                        />
+                    ))}
+                </LineChart>
+            </ResponsiveContainer>
+
+            {specs.length > 1 && (
+                <ul
+                    style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "6px 16px",
+                        margin: "10px 0 0",
+                        padding: 0,
+                        listStyle: "none",
+                        fontSize: 12,
+                        color: CHART.text,
+                    }}
+                >
+                    {specs.map((l) => (
+                        <li key={l.key} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ width: 8, height: 8, borderRadius: 2, background: l.color }} />
+                            {l.name ?? labelFor(l.key)}
+                        </li>
+                    ))}
+                </ul>
             )}
         </div>
     );
 }
 
-export const SynPieChart = React.memo(function SynPieChart({
-    data,
-    dataKey,
-    nameKey = "name",
-    height = 300,
-}: {
-    data: ChartDatum[];
-    dataKey: string;
+/* ── Pie / donut ── */
+interface PieProps {
+    data: Row[];
+    dataKey?: string;
     nameKey?: string;
     height?: number;
-}) {
-    const [hovered, setHovered] = useState<number | null>(null);
+    formatValue?: Fmt;
+    centerCaption?: string;
+    colorBy?: (row: Row) => string;
+    [extra: string]: unknown;
+}
 
-    const { chartData, colorMap } = useMemo(() => {
-        if (!data || data.length === 0) return { chartData: [], colorMap: {} as Record<string, string> };
+export function SynPieChart({
+    data,
+    dataKey = "value",
+    nameKey = "name",
+    height = 180,
+    formatValue = defaultFmt,
+    centerCaption = "total",
+    colorBy,
+}: PieProps) {
+    const reduce = useReducedMotion();
+    const [active, setActive] = useState<number | null>(null);
 
-        const sorted = [...data].sort((a, b) => (b[dataKey] || 0) - (a[dataKey] || 0));
-        const cMap: Record<string, string> = {};
-
-        if (sorted.length <= MAX_SLICES) {
-            sorted.forEach((d, i) => { cMap[d[nameKey]] = COLORS[i % COLORS.length]; });
-            return { chartData: sorted, colorMap: cMap };
-        }
-
-        const topItems      = sorted.slice(0, MAX_SLICES - 1);
-        const remainingItems = sorted.slice(MAX_SLICES - 1);
-        const otherValue    = remainingItems.reduce((sum, d) => sum + (d[dataKey] || 0), 0);
-        const otherNames    = remainingItems.map(d => d[nameKey]);
-
-        topItems.forEach((d, i) => { cMap[d[nameKey]] = COLORS[i % COLORS.length]; });
-        cMap["Other"] = "var(--color-text-3)";
-
-        const grouped = [
-            ...topItems,
-            { [nameKey]: "Other", [dataKey]: otherValue, _groupedItems: otherNames },
-        ];
-
-        return { chartData: grouped, colorMap: cMap };
-    }, [data, dataKey, nameKey]);
-
-    if (chartData.length === 0) {
-        return (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height, color: "var(--color-text-3)", fontSize: 13 }}>
-                No data available
-            </div>
-        );
-    }
-
-    const total = chartData.reduce((sum, d) => sum + (d[dataKey] || 0), 0);
+    /* Tier names (Critical / Elevated / Stable ...) get their risk colour automatically */
+    const rows = data.map((r, i) => ({
+        ...r,
+        _fill: colorBy?.(r) ?? tierColor(String(r[nameKey])) ?? NEUTRAL_PALETTE[i % NEUTRAL_PALETTE.length],
+    }));
+    const total = rows.reduce((s, r) => s + (Number(r[dataKey]) || 0), 0);
 
     return (
-        <div style={{ display: "flex", alignItems: "center", gap: 16, height }}>
-            <div style={{ flex: "0 0 55%", height: "100%" }}>
+        <div>
+            <div style={{ position: "relative", height }}>
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
+                        <Tooltip content={<ChartTooltip formatValue={formatValue} />} />
                         <Pie
-                            data={chartData}
+                            data={rows}
                             dataKey={dataKey}
                             nameKey={nameKey}
-                            cx="50%"
-                            cy="50%"
-                            outerRadius={Math.min(height * 0.38, 110)}
-                            innerRadius={Math.min(height * 0.2,  55)}
+                            innerRadius="62%"
+                            outerRadius="90%"
                             paddingAngle={2}
-                            label={false}
-                            labelLine={false}
-                            onMouseEnter={(_, index) => setHovered(index)}
-                            onMouseLeave={() => setHovered(null)}
-                            stroke="none"
+                            stroke="#0b1220"
+                            strokeWidth={2}
+                            isAnimationActive={!reduce}
+                            animationDuration={900}
+                            onMouseEnter={(_: unknown, i: number) => setActive(i)}
+                            onMouseLeave={() => setActive(null)}
                         >
-                            {chartData.map((entry, i) => (
+                            {rows.map((r, i) => (
                                 <Cell
                                     key={i}
-                                    fill={colorMap[entry[nameKey]] || COLORS[i % COLORS.length]}
-                                    opacity={hovered === null || hovered === i ? 1 : 0.35}
-                                    style={{ transition: "opacity 120ms cubic-bezier(0.16,1,0.3,1)", cursor: "pointer" }}
+                                    fill={r._fill}
+                                    fillOpacity={active === null || active === i ? 1 : 0.35}
+                                    style={{ transition: "fill-opacity 160ms ease" }}
                                 />
                             ))}
                         </Pie>
-                        <Tooltip content={<CustomPieTooltip />} />
                     </PieChart>
                 </ResponsiveContainer>
+                <div
+                    style={{
+                        position: "absolute",
+                        inset: 0,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        pointerEvents: "none",
+                    }}
+                >
+                    <div style={{ fontSize: 22, fontWeight: 300, color: "#f3efe4", letterSpacing: "-0.02em" }}>
+                        {formatValue(total)}
+                    </div>
+                    <div style={{ fontSize: 10, letterSpacing: "0.1em", textTransform: "uppercase", color: CHART.axis }}>
+                        {centerCaption}
+                    </div>
+                </div>
             </div>
 
-            {/* Legend */}
-            <div style={{
-                flex: "1 1 45%",
-                maxHeight: height - 16,
-                overflowY: "auto",
-                display: "flex",
-                flexDirection: "column",
-                gap: 4,
-            }}>
-                {chartData.map((entry, i) => {
-                    const val   = entry[dataKey] || 0;
-                    const pct   = total > 0 ? ((val / total) * 100).toFixed(1) : "0";
-                    const name  = entry[nameKey];
-                    const color = colorMap[name] || COLORS[i % COLORS.length];
-                    const isHov = hovered === i;
-
+            <ul style={{ margin: "14px 0 0", padding: 0, listStyle: "none" }}>
+                {rows.map((r, i) => {
+                    const v = Number(r[dataKey]) || 0;
                     return (
-                        <div
+                        <li
                             key={i}
-                            onMouseEnter={() => setHovered(i)}
-                            onMouseLeave={() => setHovered(null)}
-                            style={{
-                                display:    "flex",
-                                alignItems: "center",
-                                gap:        8,
-                                padding:    "4px 8px",
-                                borderRadius: 4,
-                                background: isHov ? "var(--color-surface-2)" : "transparent",
-                                cursor:     "pointer",
-                                transition: "background 120ms cubic-bezier(0.16,1,0.3,1)",
-                            }}
+                            className="list-row"
+                            onMouseEnter={() => setActive(i)}
+                            onMouseLeave={() => setActive(null)}
+                            style={{ padding: "6px 10px", fontSize: 12 }}
                         >
-                            <span style={{ width: 8, height: 8, borderRadius: 2, background: color, flexShrink: 0 }} />
-                            <span style={{
-                                flex: 1,
-                                fontSize: 11,
-                                color: isHov ? "var(--color-text-1)" : "var(--color-text-2)",
-                                whiteSpace: "nowrap",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                fontWeight: isHov ? 500 : 400,
-                                transition: "color 120ms cubic-bezier(0.16,1,0.3,1)",
-                            }}>
-                                {name}
+                            <span style={{ width: 8, height: 8, flexShrink: 0, borderRadius: 2, background: r._fill }} />
+                            <span
+                                style={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                    color: "#cfd8e8",
+                                }}
+                            >
+                                {String(r[nameKey])}
                             </span>
-                            <span style={{
-                                fontSize:   11,
-                                color:      isHov ? color : "var(--color-text-3)",
-                                fontWeight: 500,
-                                flexShrink: 0,
-                                transition: "color 120ms cubic-bezier(0.16,1,0.3,1)",
-                            }}>
-                                {pct}%
+                            <span style={{ color: CHART.text, fontVariantNumeric: "tabular-nums" }}>
+                                {total > 0 ? ((v / total) * 100).toFixed(1) : "0.0"}%
                             </span>
-                        </div>
+                        </li>
                     );
                 })}
-            </div>
+            </ul>
         </div>
     );
-});
+}

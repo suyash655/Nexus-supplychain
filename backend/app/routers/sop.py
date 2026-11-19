@@ -5,13 +5,12 @@ REST API endpoints for Sales & Operations Planning,
 consensus forecasting, and executive dashboard.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-from typing import Dict, List, Any, Optional
-from pydantic import BaseModel
-import pandas as pd
+from typing import Any, Dict, List, Optional
 
-from app.core.dependencies import get_db, get_current_user
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
+
+from app.core.dependencies import get_current_user
 from app.engines.sop_engine import SOPEngine
 
 router = APIRouter(prefix="/ibp/sop", tags=["Sales & Operations Planning"])
@@ -80,12 +79,12 @@ async def initialize_sop(
     """
     try:
         result = sop_engine.initialize(config)
-        
+
         if result.get("status") != "success":
             raise HTTPException(status_code=500, detail=result.get("error"))
-        
+
         return result
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -97,7 +96,7 @@ async def create_consensus_forecast(
 ):
     """
     Create consensus forecast by combining functional inputs.
-    
+
     Combines forecasts from sales, marketing, finance, and operations
     into a single consensus forecast with variance analysis.
     """
@@ -106,12 +105,12 @@ async def create_consensus_forecast(
             functional_inputs=request.functional_inputs,
             weights=request.weights
         )
-        
+
         if result.get("status") != "success":
             raise HTTPException(status_code=500, detail=result.get("error"))
-        
+
         return result
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -130,12 +129,12 @@ async def submit_forecast(
             submitter=request.submitter,
             comments=request.comments
         )
-        
+
         if result.get("status") != "success":
             raise HTTPException(status_code=500, detail=result.get("error"))
-        
+
         return result
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -155,12 +154,12 @@ async def approve_forecast(
             level=request.level,
             comments=request.comments
         )
-        
+
         if result.get("status") != "success":
             raise HTTPException(status_code=500, detail=result.get("error"))
-        
+
         return result
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -180,12 +179,12 @@ async def reject_forecast(
             level=request.level,
             reason=request.reason
         )
-        
+
         if result.get("status") != "success":
             raise HTTPException(status_code=500, detail=result.get("error"))
-        
+
         return result
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -197,7 +196,7 @@ async def generate_executive_dashboard(
 ):
     """
     Generate executive dashboard with key metrics and insights.
-    
+
     Provides comprehensive view of demand, supply, inventory, and
     financial metrics with actionable recommendations.
     """
@@ -208,12 +207,12 @@ async def generate_executive_dashboard(
             inventory_status=request.inventory_status,
             financial_data=request.financial_data
         )
-        
+
         if result.get("status") != "success":
             raise HTTPException(status_code=500, detail=result.get("error"))
-        
+
         return result
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -225,7 +224,7 @@ async def performance_management(
 ):
     """
     Calculate performance metrics and track against targets.
-    
+
     Evaluates forecast accuracy, inventory performance, customer
     service levels, and financial metrics.
     """
@@ -235,12 +234,12 @@ async def performance_management(
             actuals=request.actuals,
             targets=request.targets
         )
-        
+
         if result.get("status") != "success":
             raise HTTPException(status_code=500, detail=result.get("error"))
-        
+
         return result
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -255,12 +254,12 @@ async def get_forecast_version_history(
     """
     try:
         result = sop_engine.get_forecast_version_history(sku=sku)
-        
+
         if result.get("status") != "success":
             raise HTTPException(status_code=500, detail=result.get("error"))
-        
+
         return result
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -272,7 +271,7 @@ async def compare_scenarios(
 ):
     """
     Compare multiple planning scenarios side by side.
-    
+
     Enables comparison of demand scenarios, supply scenarios,
     and financial scenarios for decision support.
     """
@@ -281,12 +280,12 @@ async def compare_scenarios(
             base_scenario=request.base_scenario,
             comparison_scenarios=request.comparison_scenarios
         )
-        
+
         if result.get("status") != "success":
             raise HTTPException(status_code=500, detail=result.get("error"))
-        
+
         return result
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -302,15 +301,15 @@ async def get_consensus_forecast(
     try:
         if forecast_id not in sop_engine.consensus_forecasts:
             raise HTTPException(status_code=404, detail="Forecast not found")
-        
+
         forecast = sop_engine.consensus_forecasts[forecast_id]
-        
+
         return {
             "status": "success",
             "forecast_id": forecast_id,
             "forecast": forecast
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -328,15 +327,15 @@ async def get_executive_dashboard(
     try:
         if dashboard_id not in sop_engine.executive_metrics:
             raise HTTPException(status_code=404, detail="Dashboard not found")
-        
+
         dashboard = sop_engine.executive_metrics[dashboard_id]
-        
+
         return {
             "status": "success",
             "dashboard_id": dashboard_id,
             "dashboard": dashboard
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:

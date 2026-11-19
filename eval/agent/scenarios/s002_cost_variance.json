@@ -1,0 +1,12 @@
+{
+  "scenario_id": "s002",
+  "title": "Unpredictable cost spikes and contract variance",
+  "supplier": "Beacon Logistics",
+  "risk_score": 64.0,
+  "metrics": {
+    "cost_variance": 42.1,
+    "avg_delay": 3.2
+  },
+  "expected_action_type": "renegotiate_terms",
+  "expected_urgency": "medium"
+}

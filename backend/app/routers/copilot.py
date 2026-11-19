@@ -2,13 +2,13 @@
 NEXUS — Copilot Router
 """
 
-from fastapi import APIRouter, Depends, HTTPException  # type: ignore
+from fastapi import APIRouter, Depends  # type: ignore
 from pydantic import BaseModel, Field  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 
 from app.core.dependencies import get_db, require_auth  # type: ignore
+from app.core.errors import EngineUnavailableError  # type: ignore
 from app.core.orchestrator import get_analysis_result  # type: ignore
-from app.core.errors import EngineUnavailableError, ValidationError  # type: ignore
 
 router = APIRouter(prefix="/copilot", tags=["Copilot"])
 

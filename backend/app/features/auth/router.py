@@ -2,17 +2,17 @@
 NEXUS — Auth Router
 """
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request  # type: ignore
-from pydantic import BaseModel, EmailStr, Field  # type: ignore
-from sqlalchemy.orm import Session  # type: ignore
-from slowapi import Limiter  # type: ignore
-from slowapi.util import get_remote_address  # type: ignore
 from typing import Optional
 
+from fastapi import APIRouter, Depends, Header, HTTPException, Request  # type: ignore
+from pydantic import BaseModel, EmailStr, Field  # type: ignore
+from slowapi import Limiter  # type: ignore
+from slowapi.util import get_remote_address  # type: ignore
+from sqlalchemy.orm import Session  # type: ignore
+
+from app.auth import AuditLog, AuthService  # type: ignore
 from app.core.database import SessionLocal  # type: ignore
 from app.core.dependencies import require_auth  # type: ignore
-from app.auth import AuthService, AuditLog  # type: ignore
-from app.auth.utils import decode_token  # type: ignore
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
