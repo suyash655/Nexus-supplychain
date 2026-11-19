@@ -70,13 +70,15 @@ export default memo(function TopNav() {
 
   /* Read browser-only state after mount so server and client markup match */
   useEffect(() => {
-    setIsMac(/Mac|iPhone|iPad/i.test(navigator.platform));
-    try {
-      const raw = localStorage.getItem("nexus_user");
-      if (raw) setUser(JSON.parse(raw));
-    } catch {
-      /* ignore malformed stored user */
-    }
+    queueMicrotask(() => {
+      setIsMac(/Mac|iPhone|iPad/i.test(navigator.platform));
+      try {
+        const raw = localStorage.getItem("nexus_user");
+        if (raw) setUser(JSON.parse(raw));
+      } catch {
+        /* ignore malformed stored user */
+      }
+    });
   }, []);
 
   // Close search when clicking outside

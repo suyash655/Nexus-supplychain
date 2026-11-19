@@ -98,7 +98,8 @@ export default function DashboardPage() {
   const [uploadedReal, setUploadedReal] = useState(false);
 
   useEffect(() => {
-    setUploadedReal(localStorage.getItem("nexus_has_real_data") === "true");
+    const hasData = localStorage.getItem("nexus_has_real_data") === "true";
+    queueMicrotask(() => setUploadedReal(hasData));
   }, []);
 
   const { data: summary, loading: l1, isDemoMode: dSummary } = useApi<Summary | null>("/analytics/summary", { fallback: DEMO_SUMMARY });

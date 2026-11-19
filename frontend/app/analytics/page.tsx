@@ -94,7 +94,8 @@ export default function AnalyticsPage() {
   const [uploadedReal, setUploadedReal] = useState(false);
 
   useEffect(() => {
-    setUploadedReal(localStorage.getItem("nexus_has_real_data") === "true");
+    const hasData = localStorage.getItem("nexus_has_real_data") === "true";
+    queueMicrotask(() => setUploadedReal(hasData));
   }, []);
 
   // The range goes into the request path, so changing it refetches automatically.
