@@ -1,10 +1,10 @@
-import io
-import json
+from typing import Dict, List
+
 import pandas as pd
-from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
+
 from app.models.supply import SupplyData, UploadHistory
-from app.utils.sanitizers import _safe_str, _safe_int, _safe_float
+from app.utils.sanitizers import _safe_float, _safe_int, _safe_str
 
 COLUMN_SYNONYMS = {
     "supplier": ["supplier", "vendor", "supplier_name", "vendor_name", "manufacturer", "source", "ven_no", "vendor_id", "supplier_code", "sup_name", "sup_id", "supp", "Category Name"],
@@ -79,7 +79,7 @@ def ingest_dataframe(df: pd.DataFrame, filename: str, file_type: str, mapping_di
     batch_size = 1000
     records_to_insert = []
     m = dict(mapping_dict)
-    
+
     for row in df.to_dict('records'):
         try:
             record = SupplyData(
@@ -102,7 +102,7 @@ def ingest_dataframe(df: pd.DataFrame, filename: str, file_type: str, mapping_di
                 db.commit()
                 inserted += len(records_to_insert)
                 records_to_insert = []
-        except Exception as e:
+        except Exception:
             rejected += 1
             db.rollback()
 
@@ -143,7 +143,7 @@ def ingest_dataframe(df: pd.DataFrame, filename: str, file_type: str, mapping_di
         )
         db.add(history)
         db.commit()
-    except Exception as e:
+    except Exception:
         db.rollback()
 
     return {

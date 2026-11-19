@@ -18,7 +18,7 @@ interface CacheEntry<T> {
 const cache = new Map<string, CacheEntry<any>>();
 const inflight = new Map<string, Promise<any>>();
 const listeners = new Map<string, Set<() => void>>();
-const reducedTtlEndpoints = new Set<string>(); // Track endpoints that need reduced TTL
+const reducedTtlEndpoints = new Set<string>(); // Endpoints that need reduced TTL
 
 /**
  * Cache buster.
@@ -44,7 +44,6 @@ export function setReducedTtl(endpoint?: string) {
   if (endpoint) {
     reducedTtlEndpoints.add(endpoint);
   } else {
-    // Mark all common analytics endpoints for reduced TTL
     reducedTtlEndpoints.add("/analytics/kpi");
     reducedTtlEndpoints.add("/analytics/trends");
     reducedTtlEndpoints.add("/analytics/suppliers");
@@ -55,8 +54,8 @@ export function setReducedTtl(endpoint?: string) {
 }
 
 /**
- * Reset reduced TTL behavior for specific endpoints
- * Call this after data has stabilized to restore normal caching
+ * Reset reduced TTL behavior for specific endpoints.
+ * Call this after data has stabilized to restore normal caching.
  */
 export function resetReducedTtl(endpoint?: string) {
   if (endpoint) {
@@ -67,27 +66,30 @@ export function resetReducedTtl(endpoint?: string) {
 }
 
 /**
- * Force cache refresh - invalidates and immediately triggers refetch
+ * Force cache refresh - invalidates and immediately triggers refetch.
  * Call with an endpoint to force refresh just that endpoint.
- * Call with no args to force refresh entire cache.
+ * Call with no args to force refresh the entire cache.
  */
 export function forceRefreshApi(endpoint?: string) {
+  // invalidateApi already notifies listeners, which triggers the refetch
   invalidateApi(endpoint);
-  // Force immediate refetch by calling all listeners
-  if (endpoint) {
-    listeners.get(endpoint)?.forEach((fn) => fn());
-  } else {
-    listeners.forEach((set) => set.forEach((fn) => fn()));
-  }
 }
 
 interface UseApiOptions<T> {
   ttl?: number; // Time-to-live in milliseconds (default: 30000)
-  fallback?: T; // Value to use when data is null/error
+  fallback?: T; // Value to use when in demo mode and the request fails
   enabled?: boolean; // Skip fetching if false
   timeout?: number; // Request timeout in milliseconds (default: 8000)
-  showError?: boolean; // Show error toast on failure (default: false)
+  showError?: boolean; // Log a warning on failure (default: false)
   retryOnAuthError?: boolean; // Whether to retry on 401 errors (default: false)
+}
+
+function isDemoModeOn(): boolean {
+  return typeof window !== "undefined" && localStorage.getItem("nexus_demo_mode") === "true";
+}
+
+function sameError(a: ApiError | null, b: ApiError): boolean {
+  return !!a && a.code === b.code && a.message === b.message && a.status === b.status;
 }
 
 export function useApi<T>(path: string, options: UseApiOptions<T> = {}) {
@@ -100,160 +102,153 @@ export function useApi<T>(path: string, options: UseApiOptions<T> = {}) {
     retryOnAuthError = false,
   } = options;
 
+  // Callers often pass an inline object as `fallback`. Its identity changes on
+  // every render, so it must never be a dependency of fetchData. Read it from a ref.
+  const fallbackRef = useRef<T | undefined>(fallback);
+  fallbackRef.current = fallback;
+
   const [data, setData] = useState<T | null>(() => {
     // Synchronous cache hit on initial render
     if (enabled && cache.has(path)) {
       const entry = cache.get(path)!;
-      // Use reduced TTL (5 seconds) for endpoints that were recently invalidated
       const effectiveTtl = reducedTtlEndpoints.has(path) ? 5000 : ttl;
       if (Date.now() - entry.timestamp < effectiveTtl) {
         return entry.data as T;
       }
     }
-    // Use fallback on initial render if demo mode is enabled
-    const demoMode = typeof window !== "undefined" ? localStorage.getItem("nexus_demo_mode") === "true" : false;
-    return demoMode && fallback ? fallback : null;
+    // Use fallback on initial render only if demo mode is enabled
+    return isDemoModeOn() && fallback ? fallback : null;
   });
 
   const [loading, setLoading] = useState(!cache.has(path) && enabled);
   const [error, setError] = useState<ApiError | null>(null);
-  const [isDemoMode, setIsDemoMode] = useState(typeof window !== "undefined" ? localStorage.getItem("nexus_demo_mode") === "true" : false);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(isDemoModeOn());
 
   const fetchRef = useRef(0);
   const authErrorCount = useRef(0);
+  const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const fetchData = useCallback(async (ignoreCache = false) => {
-    if (!enabled) return;
+  const fetchData = useCallback(
+    async (ignoreCache = false) => {
+      if (!enabled) return;
 
-    // Check for demo mode inline to avoid dependency issues
-    const demoMode = typeof window !== "undefined" ? localStorage.getItem("nexus_demo_mode") === "true" : false;
-    setIsDemoMode(demoMode);
+      const demoMode = isDemoModeOn();
+      setIsDemoMode(demoMode);
 
-    // Check cache
-    if (!ignoreCache && cache.has(path)) {
-      const entry = cache.get(path)!;
-      // Use reduced TTL (5 seconds) for endpoints that were recently invalidated
-      const effectiveTtl = reducedTtlEndpoints.has(path) ? 5000 : ttl;
-      if (Date.now() - entry.timestamp < effectiveTtl) {
-        setData(entry.data);
-        setError(null);
-        setLoading(false);
-        return;
-      }
-    }
-
-    // Only use fallback if explicitly in demo mode
-    // This ensures real data is shown when available after upload
-    const effectiveFallback = demoMode ? fallback : undefined;
-
-    const currentFetch = ++fetchRef.current;
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Deduplication: if another component is fetching this, wait for it
-      let reqPromise = inflight.get(path);
-      if (!reqPromise) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-        reqPromise = apiFetch(path, { signal: controller.signal })
-          .finally(() => {
-            clearTimeout(timeoutId);
-            inflight.delete(path); // Cleanup
-          })
-          .then(async (res) => {
-            if (!res.ok) {
-              const code: ApiErrorCode = res.status >= 500 ? "server_5xx" : "client_4xx";
-              throw { code, message: res.statusText, status: res.status };
-            }
-            try {
-              return await res.json();
-            } catch {
-              throw { code: "parse", message: "Failed to parse JSON response" };
-            }
-          })
-          .catch((err) => {
-            if (err.name === "AbortError") {
-              throw { code: "timeout", message: "Request timed out" };
-            }
-            if (err.code) throw err; // Already formatted
-            throw { code: "network", message: err.message || "Network error" };
-          });
-
-        inflight.set(path, reqPromise);
-      }
-
-      const result = await reqPromise;
-
-      // Only update state if this is still the most recent fetch call
-      if (currentFetch === fetchRef.current) {
-        authErrorCount.current = 0; // Reset auth error count on success
-        cache.set(path, { data: result, timestamp: Date.now() });
-        setData(result);
-        setError(null);
-        // If we got real data, exit demo mode
-        if (typeof window !== "undefined" && localStorage.getItem("nexus_demo_mode") === "true") {
-          localStorage.removeItem("nexus_demo_mode");
+      // Cache check
+      if (!ignoreCache && cache.has(path)) {
+        const entry = cache.get(path)!;
+        const effectiveTtl = reducedTtlEndpoints.has(path) ? 5000 : ttl;
+        if (Date.now() - entry.timestamp < effectiveTtl) {
+          setData(entry.data);
+          setError(null);
+          setLoading(false);
+          return;
         }
-        setIsDemoMode(false);
       }
-    } catch (err: any) {
-      if (currentFetch === fetchRef.current) {
-        const error = err as ApiError;
 
-        // Handle 401 authentication errors
-        if (error.status === 401) {
-          authErrorCount.current += 1;
+      // Only use fallback if explicitly in demo mode, so real data wins after upload
+      const effectiveFallback = demoMode ? fallbackRef.current : undefined;
 
-          // Don't retry on 401 errors unless explicitly requested and limit retries
-          if (!retryOnAuthError || authErrorCount.current >= 3) {
-            setError(error);
-            setLoading(false); // Stop loading state
-            if (effectiveFallback) {
-              setData(effectiveFallback);
-            } else {
-              setData(null);
-            }
-          } else {
-            // Retry once on 401 if retryOnAuthError is enabled
-            setTimeout(() => fetchData(true), 1000);
+      const currentFetch = ++fetchRef.current;
+      setLoading(true);
+      setError(null);
+
+      try {
+        // Deduplication: if another component is fetching this, wait for it
+        let reqPromise = inflight.get(path);
+        if (!reqPromise) {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+          reqPromise = apiFetch(path, { signal: controller.signal })
+            .finally(() => {
+              clearTimeout(timeoutId);
+              inflight.delete(path);
+            })
+            .then(async (res) => {
+              if (!res.ok) {
+                const code: ApiErrorCode = res.status >= 500 ? "server_5xx" : "client_4xx";
+                throw { code, message: res.statusText, status: res.status };
+              }
+              try {
+                return await res.json();
+              } catch {
+                throw { code: "parse", message: "Failed to parse JSON response" };
+              }
+            })
+            .catch((err) => {
+              if (err?.name === "AbortError") {
+                throw { code: "timeout", message: "Request timed out" };
+              }
+              if (err?.code) throw err; // Already formatted
+              throw { code: "network", message: err?.message || "Network error" };
+            });
+
+          inflight.set(path, reqPromise);
+        }
+
+        const result = await reqPromise;
+
+        // Only update state if this is still the most recent fetch call
+        if (currentFetch === fetchRef.current) {
+          authErrorCount.current = 0;
+          cache.set(path, { data: result, timestamp: Date.now() });
+          setData(result);
+          setError(null);
+          // Real data arrived, so leave demo mode
+          if (isDemoModeOn()) {
+            localStorage.removeItem("nexus_demo_mode");
           }
-          return; // Exit early for 401 errors
+          setIsDemoMode(false);
         }
+      } catch (err: any) {
+        if (currentFetch === fetchRef.current) {
+          const apiError = err as ApiError;
 
-        setError(error);
-        // Only use fallback if in demo mode
-        if (effectiveFallback) {
-          setData(effectiveFallback);
-        } else {
-          setData(null);
+          // Handle 401 authentication errors
+          if (apiError.status === 401) {
+            authErrorCount.current += 1;
+
+            if (!retryOnAuthError || authErrorCount.current >= 3) {
+              setError((prev) => (sameError(prev, apiError) ? prev : apiError));
+              setData(effectiveFallback ?? null);
+            } else {
+              // Retry on 401 if enabled, capped at 3 attempts
+              if (retryTimer.current) clearTimeout(retryTimer.current);
+              retryTimer.current = setTimeout(() => fetchData(true), 1000);
+            }
+            return;
+          }
+
+          // Identical errors keep the same object, so state does not change and nothing re-renders
+          setError((prev) => (sameError(prev, apiError) ? prev : apiError));
+          setData(effectiveFallback ?? null);
+
+          // Keep this hook UI-agnostic; callers read `error` for UI feedback
+          if (showError && typeof window !== "undefined") {
+            console.warn("API Error:", apiError.message);
+          }
         }
-
-        // Keep this hook UI-agnostic; callers that need toast feedback should
-        // read `error` and render or notify from component scope.
-        if (showError && typeof window !== "undefined") {
-          console.warn("API Error:", err.message);
+      } finally {
+        if (currentFetch === fetchRef.current) {
+          setLoading(false);
         }
       }
-    } finally {
-      if (currentFetch === fetchRef.current) {
-        setLoading(false);
-      }
-    }
-  }, [path, ttl, fallback, enabled, timeout, showError, retryOnAuthError]);
+    },
+    // `fallback` is intentionally absent: it is read through fallbackRef
+    [path, ttl, enabled, timeout, showError, retryOnAuthError]
+  );
 
   useEffect(() => {
-    // Don't fetch if we already have a 401 error to prevent retry loops
-    if (error?.status === 401 && authErrorCount.current >= 1) {
-      return;
-    }
+    // New path or options: start with a clean auth-error counter
+    authErrorCount.current = 0;
 
     fetchData();
 
-    // Setup listener for manual invalidation
+    // Listener for manual invalidation
     const listener = () => fetchData(true);
-    
+
     let set = listeners.get(path);
     if (!set) {
       set = new Set();
@@ -264,8 +259,12 @@ export function useApi<T>(path: string, options: UseApiOptions<T> = {}) {
     return () => {
       set?.delete(listener);
       if (set?.size === 0) listeners.delete(path);
+      if (retryTimer.current) {
+        clearTimeout(retryTimer.current);
+        retryTimer.current = null;
+      }
     };
-  }, [fetchData, path, error?.status]);
+  }, [fetchData, path]);
 
   const retry = useCallback(() => fetchData(true), [fetchData]);
 

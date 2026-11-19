@@ -1,12 +1,13 @@
 import logging
 import math as _math
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import StandardScaler
-from scipy import stats
-from typing import Dict, List, Any, Optional
-from datetime import datetime, timezone
+
 from app.engines.forecaster import TimeSeriesForecaster, _safe
 from app.utils.supply_metrics import completeness_score, on_time_mask
 
@@ -261,11 +262,12 @@ class RiskScorer:
 
             if "delay_days" in group.columns:
                 delays = pd.to_numeric(group["delay_days"], errors="coerce").fillna(0)
-                factors["delay_frequency"] = min(100.0, float((~on_time_mask(delays)).mean() * 100))
-                factors["delay_severity"]  = min(100.0, float(delays.mean() / global_max_delay * 100))
+                factors["delay_frequency"] = _safe(min(100.0, float((~on_time_mask(delays)).mean() * 100)), 0.0)
+                factors["delay_severity"]  = _safe(min(100.0, float(delays.mean() / global_max_delay * 100)), 0.0)
                 # consistency used for display only, not in weighted score
                 delay_mean = float(delays.mean())
-                consistency_cv = float(delays.std()) / max(delay_mean, 0.01)
+                delay_std = float(delays.std()) if len(delays) > 1 else 0.0
+                consistency_cv = _safe(delay_std / max(delay_mean, 0.01), 0.0)
             else:
                 factors["delay_frequency"] = 0.0
                 factors["delay_severity"]  = 0.0
@@ -273,15 +275,19 @@ class RiskScorer:
 
             if "cost" in group.columns:
                 costs = pd.to_numeric(group["cost"], errors="coerce").fillna(0)
-                cost_cv = float(costs.std()) / max(float(costs.mean()), 0.01)
-                factors["cost_variance"] = min(100.0, cost_cv * 40)
+                cost_mean = float(costs.mean())
+                cost_std = float(costs.std()) if len(costs) > 1 else 0.0
+                cost_cv = _safe(cost_std / max(cost_mean, 0.01), 0.0)
+                factors["cost_variance"] = _safe(min(100.0, cost_cv * 40), 0.0)
             else:
                 factors["cost_variance"] = 0.0
 
             quality_data_available = False
             if "quality_score" in group.columns and group["quality_score"].notna().sum() > 0:
                 avg_quality = float(group["quality_score"].mean())
-                factors["quality_factor"] = max(0.0, 100.0 - avg_quality)
+                if 0.0 <= avg_quality <= 1.0:
+                    avg_quality *= 100.0
+                factors["quality_factor"] = _safe(max(0.0, min(100.0, 100.0 - avg_quality)), 30.0)
                 quality_data_available = True
             else:
                 factors["quality_factor"] = 30.0  # neutral default when missing
@@ -294,7 +300,6 @@ class RiskScorer:
             # Uses a ±margin that shrinks as n grows. At n=5 the margin is ±20pts;
             # at n=50 it's ±6pts; at n=500 it's ±2pts. This is a heuristic
             # approximation — not a true statistical interval.
-            import math as _math
             score_margin = round(min(20.0, 100.0 / _math.sqrt(max(n, 1))), 1)
             confidence_label = (
                 "low"    if n < self._MIN_RELIABLE_N

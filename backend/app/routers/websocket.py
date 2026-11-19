@@ -4,21 +4,17 @@ NEXUS — WebSocket Router
 WebSocket endpoints for real-time API updates and notifications.
 """
 
-import logging
-import json
-import uuid
 import asyncio
-from typing import Optional, Set
+import json
+import logging
+import uuid
 from datetime import datetime, timezone
+from typing import Optional
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
+from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
-from app.core.api_gateway import (
-    api_gateway,
-    APIEventType,
-    ConnectionManager
-)
+from app.core.api_gateway import APIEventType, api_gateway
 from app.engines.control_tower import ControlTowerEngine
 
 logger_ws = logging.getLogger("nexus.websocket")
@@ -44,7 +40,7 @@ async def websocket_endpoint(
 ):
     """
     Main WebSocket endpoint for real-time updates.
-    
+
     Query Parameters:
     - client_id: Optional client identifier (auto-generated if not provided)
     - subscriptions: Comma-separated list of event types to subscribe to
@@ -52,7 +48,7 @@ async def websocket_endpoint(
     # Generate client ID if not provided
     if not client_id:
         client_id = f"client_{uuid.uuid4().hex[:8]}"
-    
+
     # Parse subscriptions
     event_types = []
     if subscriptions:
@@ -64,38 +60,38 @@ async def websocket_endpoint(
             event_types = list(APIEventType)  # Default to all
     else:
         event_types = list(APIEventType)  # Default to all
-    
+
     # Connect client
     connection_result = await api_gateway.connection_manager.connect(
         websocket=websocket,
         client_id=client_id,
         metadata={"connected_at": datetime.now(timezone.utc).isoformat()}
     )
-    
+
     if "error" in connection_result:
         await websocket.close(code=4000, reason=connection_result["error"])
         return
-    
+
     # Send connection confirmation
     await websocket.send_json({
         "type": "connection_established",
         "data": connection_result,
         "timestamp": datetime.now(timezone.utc).isoformat()
     })
-    
+
     # Update subscriptions if specific ones were requested
     if event_types != list(APIEventType):
         await api_gateway.connection_manager.subscribe(client_id, event_types)
-    
+
     try:
         # Listen for incoming messages
         while True:
             data = await websocket.receive_text()
             message = json.loads(data)
-            
+
             # Handle different message types
             message_type = message.get("type", "unknown")
-            
+
             if message_type == "ping":
                 # Respond to ping with pong
                 await websocket.send_json({
@@ -103,7 +99,7 @@ async def websocket_endpoint(
                     "data": {"timestamp": datetime.now(timezone.utc).isoformat()},
                     "timestamp": datetime.now(timezone.utc).isoformat()
                 })
-            
+
             elif message_type == "subscribe":
                 # Handle subscription changes
                 new_subscriptions = message.get("data", {}).get("subscriptions", [])
@@ -123,7 +119,7 @@ async def websocket_endpoint(
                         "data": {"error": f"Invalid subscription types: {e}"},
                         "timestamp": datetime.now(timezone.utc).isoformat()
                     })
-            
+
             elif message_type == "unsubscribe":
                 # Handle unsubscription
                 subscriptions_to_remove = message.get("data", {}).get("subscriptions", [])
@@ -143,7 +139,7 @@ async def websocket_endpoint(
                         "data": {"error": f"Invalid subscription types: {e}"},
                         "timestamp": datetime.now(timezone.utc).isoformat()
                     })
-            
+
             elif message_type == "get_status":
                 # Send current connection status
                 stats = api_gateway.connection_manager.get_connection_stats()
@@ -156,7 +152,7 @@ async def websocket_endpoint(
                     },
                     "timestamp": datetime.now(timezone.utc).isoformat()
                 })
-            
+
             else:
                 # Unknown message type
                 await websocket.send_json({
@@ -164,12 +160,12 @@ async def websocket_endpoint(
                     "data": {"error": f"Unknown message type: {message_type}"},
                     "timestamp": datetime.now(timezone.utc).isoformat()
                 })
-    
+
     except WebSocketDisconnect:
         # Handle disconnection
         disconnect_result = await api_gateway.connection_manager.disconnect(client_id)
         logger_ws.info(f"Client {client_id} disconnected: {disconnect_result}")
-    
+
     except Exception as e:
         logger_ws.error(f"WebSocket error for client {client_id}: {e}")
         await api_gateway.connection_manager.disconnect(client_id)
@@ -210,21 +206,21 @@ async def control_tower_websocket(
     """
     WebSocket endpoint for real-time Control Tower data streaming.
     Provides live alerts, metrics, and monitoring updates.
-    
+
     Query Parameters:
     - client_id: Optional client identifier (auto-generated if not provided)
     """
     # Generate client ID if not provided
     if not client_id:
         client_id = f"ct_client_{uuid.uuid4().hex[:8]}"
-    
+
     # Initialize control tower if needed
     if not control_tower_engine._initialised:
         control_tower_engine.initialize()
-    
+
     # Accept connection
     await websocket.accept()
-    
+
     # Send connection confirmation
     await websocket.send_json({
         "type": "control_tower_connected",
@@ -235,7 +231,7 @@ async def control_tower_websocket(
         },
         "timestamp": datetime.now(timezone.utc).isoformat()
     })
-    
+
     try:
         # Send initial data
         active_alerts = control_tower_engine.get_active_alerts()
@@ -244,15 +240,15 @@ async def control_tower_websocket(
             "data": active_alerts,
             "timestamp": datetime.now(timezone.utc).isoformat()
         })
-        
+
         # Simulate real-time updates (in production, this would be event-driven)
         update_count = 0
-        
+
         while True:
             # Wait for 30 seconds between updates
             await asyncio.sleep(30)
             update_count += 1
-            
+
             # Generate simulated updates
             if update_count % 2 == 0:
                 # Send alert updates
@@ -266,7 +262,7 @@ async def control_tower_websocket(
                     "timestamp": datetime.now(timezone.utc).isoformat()
                 }
                 await websocket.send_json(alert_update)
-            
+
             if update_count % 3 == 0:
                 # Send metric updates
                 metric_update = {
@@ -279,17 +275,17 @@ async def control_tower_websocket(
                     "timestamp": datetime.now(timezone.utc).isoformat()
                 }
                 await websocket.send_json(metric_update)
-            
+
             # Send keepalive
             await websocket.send_json({
                 "type": "keepalive",
                 "data": {"sequence": update_count},
                 "timestamp": datetime.now(timezone.utc).isoformat()
             })
-    
+
     except WebSocketDisconnect:
         logger_ws.info(f"Control Tower client {client_id} disconnected")
-    
+
     except Exception as e:
         logger_ws.error(f"Control Tower WebSocket error for client {client_id}: {e}")
         try:

@@ -6,17 +6,17 @@ predictive analytics, and incident workflow.
 """
 
 import logging
-import pandas as pd
-from typing import Dict, Any, Optional, List
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional
 
+import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import get_db, require_auth
-from app.engines.control_tower import ControlTowerEngine
 from app.core.orchestrator import _load_dataframe
+from app.engines.control_tower import ControlTowerEngine
 from app.utils.supply_metrics import ON_TIME_DELAY_TOLERANCE_DAYS, on_time_mask
 
 logger_ct = logging.getLogger("nexus.control_tower")
@@ -89,7 +89,7 @@ def initialize_control_tower(
             config["kpi_thresholds"] = request.kpi_thresholds
         if request.monitoring_rules:
             config["monitoring_rules"] = request.monitoring_rules
-        
+
         result = control_tower_engine.initialize(config)
         return result
     except Exception as e:
@@ -109,18 +109,18 @@ def run_monitoring(
         df = _load_dataframe()
         if df.empty:
             raise HTTPException(status_code=400, detail="No data available. Upload data first.")
-        
+
         # Initialize if not already done
         if not control_tower_engine._initialised:
             control_tower_engine.initialize()
-        
+
         result = control_tower_engine.real_time_monitoring(df)
-        
+
         # Auto-generate alerts from monitoring results
         if result.get("status") == "success":
             alert_result = control_tower_engine.generate_alerts(result["monitoring_results"])
             result["alerts_generated"] = alert_result
-        
+
         return result
     except Exception as e:
         logger_ct.error(f"Error running monitoring: {e}")
@@ -193,7 +193,7 @@ def analyze_alert_correlation(
         # Get current active alerts
         alerts_result = control_tower_engine.get_active_alerts()
         alerts = alerts_result.get("active_alerts", [])
-        
+
         result = control_tower_engine.alert_correlation_analysis(alerts, request.time_window_hours)
         return result
     except Exception as e:
@@ -214,7 +214,7 @@ def generate_predictive_alerts(
         df = _load_dataframe()
         if df.empty:
             raise HTTPException(status_code=400, detail="No data available. Upload data first.")
-        
+
         result = control_tower_engine.predictive_alert_generation(df, request.look_ahead_days)
         return result
     except Exception as e:
@@ -234,7 +234,7 @@ def performance_analytics(
         df = _load_dataframe()
         if df.empty:
             raise HTTPException(status_code=400, detail="No data available. Upload data first.")
-        
+
         result = control_tower_engine.performance_analytics(df)
         return result
     except Exception as e:
@@ -254,17 +254,17 @@ def get_dashboard(
         df = _load_dataframe()
         if df.empty:
             raise HTTPException(status_code=400, detail="No data available. Upload data first.")
-        
+
         # Initialize if not already done
         if not control_tower_engine._initialised:
             control_tower_engine.initialize()
-        
+
         # Run monitoring
         monitoring_results = control_tower_engine.real_time_monitoring(df)
-        
+
         # Run analytics
         analytics = control_tower_engine.performance_analytics(df)
-        
+
         # Generate dashboard
         result = control_tower_engine.executive_dashboard(
             monitoring_results.get("monitoring_results", {}),
@@ -288,24 +288,24 @@ def get_metrics(
         # Initialize if not already done
         if not control_tower_engine._initialised:
             control_tower_engine.initialize()
-        
+
         # Get active alerts count
         alerts_result = control_tower_engine.get_active_alerts()
         active_alerts = alerts_result.get("active_alerts", [])
-        
+
         total_alerts = len(active_alerts)
         critical_alerts = len([a for a in active_alerts if a["severity"] == "critical"])
         warning_alerts = len([a for a in active_alerts if a["severity"] == "warning"])
         info_alerts = len([a for a in active_alerts if a["severity"] == "info"])
-        
+
         # Calculate resolved today (simplified)
-        resolved_today = len([a for a in control_tower_engine.alert_history 
-                            if a.get("resolved_at") and 
+        resolved_today = len([a for a in control_tower_engine.alert_history
+                            if a.get("resolved_at") and
                             datetime.fromisoformat(a["resolved_at"]).date() == datetime.now(timezone.utc).date()])
-        
+
         # Calculate system health
         health_score = 95.0  # Default, would be calculated from monitoring
-        
+
         return {
             "total_alerts": total_alerts,
             "critical_alerts": critical_alerts,
@@ -361,7 +361,7 @@ def get_system_health(
                 "metrics": {"cpu": 25, "memory": 40, "response_time": 65}
             }
         ]
-        
+
         return health_data
     except Exception as e:
         logger_ct.error(f"Error getting system health: {e}")
@@ -386,10 +386,10 @@ def get_performance_metrics(
                 {"metric": "Inventory Turnover", "current": 4.2, "target": 4.5, "trend": "up", "period": "Current Quarter"},
                 {"metric": "Supplier On-Time", "current": 91.8, "target": 93.0, "trend": "down", "period": "Current Week"}
             ]
-        
+
         # Calculate actual metrics from data
         metrics = []
-        
+
         # OTIF Rate
         if "delay_days" in df.columns:
             total = len(df)
@@ -402,7 +402,7 @@ def get_performance_metrics(
                 "trend": "stable",
                 "period": f"Current Week (<= {ON_TIME_DELAY_TOLERANCE_DAYS} day late)"
             })
-        
+
         if {"actual_demand", "forecast_demand"}.issubset(df.columns):
             actual = pd.to_numeric(df["actual_demand"], errors="coerce")
             forecast = pd.to_numeric(df["forecast_demand"], errors="coerce")
@@ -424,7 +424,7 @@ def get_performance_metrics(
                 "trend": "unavailable",
                 "period": "Not yet available"
             })
-        
+
         if {"cost_of_goods_sold", "average_inventory_value"}.issubset(df.columns):
             cogs = pd.to_numeric(df["cost_of_goods_sold"], errors="coerce").sum()
             avg_inventory = pd.to_numeric(df["average_inventory_value"], errors="coerce").mean()
@@ -443,7 +443,7 @@ def get_performance_metrics(
                 "trend": "unavailable",
                 "period": "Not yet available"
             })
-        
+
         # Supplier on-time
         if "delay_days" in df.columns:
             supplier_on_time = (int(on_time_mask(df["delay_days"]).sum()) / len(df) * 100) if len(df) > 0 else 0
@@ -454,7 +454,7 @@ def get_performance_metrics(
                 "trend": "down",
                 "period": f"Current Week (<= {ON_TIME_DELAY_TOLERANCE_DAYS} day late)"
             })
-        
+
         return metrics
     except Exception as e:
         logger_ct.error(f"Error getting performance metrics: {e}")
@@ -474,7 +474,7 @@ def create_incident(
     """
     try:
         incident_id = f"INC-{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}"
-        
+
         incident = {
             "incident_id": incident_id,
             "incident_type": request.incident_type,
@@ -529,7 +529,7 @@ def create_incident(
                 "total_assignments": 1 if request.assigned_to else 0
             }
         }
-        
+
         # In production, this would be saved to database
         # For now, return the incident object
         return {

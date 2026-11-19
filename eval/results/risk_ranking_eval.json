@@ -1,0 +1,77 @@
+{
+  "timestamp": "2026-11-18T16:16:10.988586+00:00",
+  "git_commit": "83e485d",
+  "python_version": "3.13.9",
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "summary": {
+    "recall_at_3_mean": 1.0,
+    "recall_at_3_std": 0.0,
+    "recall_at_5_mean": 1.0,
+    "recall_at_5_std": 0.0,
+    "spearman_corr_mean": 0.5482,
+    "spearman_corr_std": 0.096
+  },
+  "per_seed_runs": [
+    {
+      "seed": 0,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "spearman_corr": 0.3985,
+      "top_3_predicted": [
+        "Supplier-Crit-5",
+        "Supplier-Crit-4",
+        "Supplier-Crit-3"
+      ]
+    },
+    {
+      "seed": 1,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "spearman_corr": 0.5214,
+      "top_3_predicted": [
+        "Supplier-Crit-5",
+        "Supplier-Crit-4",
+        "Supplier-Crit-3"
+      ]
+    },
+    {
+      "seed": 2,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "spearman_corr": 0.5897,
+      "top_3_predicted": [
+        "Supplier-Crit-5",
+        "Supplier-Crit-4",
+        "Supplier-Crit-3"
+      ]
+    },
+    {
+      "seed": 3,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "spearman_corr": 0.5378,
+      "top_3_predicted": [
+        "Supplier-Crit-5",
+        "Supplier-Crit-4",
+        "Supplier-Crit-3"
+      ]
+    },
+    {
+      "seed": 4,
+      "recall_at_3": 1.0,
+      "recall_at_5": 1.0,
+      "spearman_corr": 0.6935,
+      "top_3_predicted": [
+        "Supplier-Crit-5",
+        "Supplier-Crit-4",
+        "Supplier-Crit-3"
+      ]
+    }
+  ]
+}

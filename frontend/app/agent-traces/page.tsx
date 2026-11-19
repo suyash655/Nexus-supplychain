@@ -1,10 +1,11 @@
 "use client";
 
-import React from "react";
+import { useMemo, useState } from "react";
 import Sidebar from "../components/layout/Sidebar";
 import TopNav from "../components/layout/TopNav";
 import { useApi } from "../../hooks/useApi";
 import { NoData } from "../components/Cards/NoData";
+import { Notice, PageHeader, Panel, Pill, Segmented } from "../components/ui/Primitives";
 
 type AgentTrace = {
   id: number;
@@ -18,10 +19,37 @@ type AgentTrace = {
   created_at: string;
 };
 
+type TraceResponse = { total: number; traces: AgentTrace[] };
+
+/* Module-level so its identity never changes between renders */
+const EMPTY: TraceResponse = { total: 0, traces: [] };
+
+type Filter = "all" | "errors";
+
+const FILTERS: { value: Filter; label: string }[] = [
+  { value: "all", label: "All steps" },
+  { value: "errors", label: "Errors only" },
+];
+
+function Json({ title, value }: { title: string; value: unknown }) {
+  return (
+    <details className="disclosure">
+      <summary>{title}</summary>
+      <pre className="json-block">{JSON.stringify(value, null, 2)}</pre>
+    </details>
+  );
+}
+
 export default function AgentTracesPage() {
-  const { data, loading } = useApi<{ total: number; traces: AgentTrace[] }>("/mitigation/traces?limit=100", { fallback: { total: 0, traces: [] } });
-  
-  const traces = data?.traces || [];
+  const [filter, setFilter] = useState<Filter>("all");
+  const { data, loading, error, retry } = useApi<TraceResponse>("/mitigation/traces?limit=100", { fallback: EMPTY });
+
+  const traces = useMemo(() => data?.traces ?? [], [data]);
+  const visible = useMemo(
+    () => (filter === "errors" ? traces.filter((t) => t.error) : traces),
+    [traces, filter]
+  );
+  const errorCount = useMemo(() => traces.filter((t) => t.error).length, [traces]);
 
   return (
     <div className="app-layout">
@@ -29,76 +57,95 @@ export default function AgentTracesPage() {
       <div className="main-wrapper">
         <TopNav />
         <main className="main-content">
-          <div style={{ marginBottom: 24, borderBottom: "1px solid var(--color-border)", paddingBottom: 16 }}>
-            <h1 style={{ fontSize: 22, fontWeight: 600, color: "var(--color-text-1)" }}>Agent Traces</h1>
-            <p style={{ fontSize: 13, color: "var(--color-text-2)", marginTop: 4 }}>
-              Execution logs and tool calls for the mitigation agent
-            </p>
-          </div>
+          <div className="page-wrap">
+            <PageHeader
+              eyebrow="Operations"
+              title="Agent traces"
+              subtitle="Execution logs and tool calls for the mitigation agent"
+              actions={<Segmented label="Trace filter" value={filter} onChange={(v) => setFilter(v as Filter)} options={FILTERS} />}
+            />
 
-          {loading ? (
-            <div className="skeleton" style={{ height: 400, width: "100%", borderRadius: 6 }} />
-          ) : traces.length === 0 ? (
-            <NoData msg="No agent traces found." actionText="Go to Dashboard" actionHref="/dashboard" />
-          ) : (
-            <div style={{
-              background: "var(--color-surface)",
-              border: "1px solid var(--color-border)",
-              borderRadius: 6,
-              overflow: "hidden"
-            }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                <thead>
-                  <tr style={{ background: "var(--color-surface-2)" }}>
-                    <th style={{ textAlign: "left", padding: "10px 16px", borderBottom: "1px solid var(--color-border)", color: "var(--color-text-3)", fontWeight: 500, width: "15%" }}>TIMESTAMP</th>
-                    <th style={{ textAlign: "left", padding: "10px 16px", borderBottom: "1px solid var(--color-border)", color: "var(--color-text-3)", fontWeight: 500, width: "15%" }}>RUN ID / STEP</th>
-                    <th style={{ textAlign: "left", padding: "10px 16px", borderBottom: "1px solid var(--color-border)", color: "var(--color-text-3)", fontWeight: 500, width: "15%" }}>NODE</th>
-                    <th style={{ textAlign: "left", padding: "10px 16px", borderBottom: "1px solid var(--color-border)", color: "var(--color-text-3)", fontWeight: 500 }}>I/O SUMMARY</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {traces.map((t, idx) => (
-                    <tr key={t.id || idx} style={{ borderBottom: "1px solid var(--color-border)" }}>
-                      <td style={{ padding: "12px 16px", color: "var(--color-text-2)", verticalAlign: "top" }}>
-                        {t.created_at ? new Date(t.created_at).toLocaleString() : "Unknown"}
-                      </td>
-                      <td style={{ padding: "12px 16px", color: "var(--color-text-2)", verticalAlign: "top" }}>
-                        <div style={{ fontFamily: "monospace", fontSize: 11, marginBottom: 4 }}>
-                          {t.run_id ? t.run_id.substring(0, 8) + "..." : "none"}
-                        </div>
-                        <span style={{ background: "var(--color-surface-2)", padding: "2px 6px", borderRadius: 4, fontSize: 10 }}>Step {t.step}</span>
-                      </td>
-                      <td style={{ padding: "12px 16px", color: "var(--color-text-1)", fontWeight: 500, verticalAlign: "top" }}>
-                        {t.node_name}
-                        <div style={{ fontSize: 10, color: "var(--color-text-3)", marginTop: 4, fontWeight: "normal" }}>
-                          {t.duration_ms} ms
-                        </div>
-                      </td>
-                      <td style={{ padding: "12px 16px", verticalAlign: "top" }}>
-                        {t.error ? (
-                          <div style={{ color: "#FF4444", fontWeight: 500, marginBottom: 8 }}>Error: {t.error}</div>
-                        ) : null}
-                        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                          <details style={{ background: "var(--color-surface-2)", padding: "6px 10px", borderRadius: 4 }}>
-                            <summary style={{ cursor: "pointer", color: "var(--color-text-2)", fontWeight: 500, userSelect: "none" }}>Input JSON</summary>
-                            <pre style={{ margin: 0, marginTop: 8, overflowX: "auto", fontSize: 11, color: "var(--color-text-1)", padding: 8, background: "rgba(0,0,0,0.2)", borderRadius: 4 }}>
-                              {JSON.stringify(t.input, null, 2)}
-                            </pre>
-                          </details>
-                          <details style={{ background: "var(--color-surface-2)", padding: "6px 10px", borderRadius: 4 }}>
-                            <summary style={{ cursor: "pointer", color: "var(--color-text-2)", fontWeight: 500, userSelect: "none" }}>Output JSON</summary>
-                            <pre style={{ margin: 0, marginTop: 8, overflowX: "auto", fontSize: 11, color: "var(--color-text-1)", padding: 8, background: "rgba(0,0,0,0.2)", borderRadius: 4 }}>
-                              {JSON.stringify(t.output, null, 2)}
-                            </pre>
-                          </details>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+            {error && (
+              <div style={{ marginBottom: 24 }}>
+                <Notice
+                  tone="danger"
+                  title="Could not load traces"
+                  action={<button type="button" className="btn btn-secondary btn-sm" onClick={retry}>Retry</button>}
+                >
+                  The server did not respond. Check that the backend is running.
+                </Notice>
+              </div>
+            )}
+
+            {loading && traces.length === 0 ? (
+              <div className="skeleton" style={{ height: 400, borderRadius: 14 }} />
+            ) : visible.length === 0 ? (
+              <Panel>
+                <NoData
+                  height={220}
+                  msg={filter === "errors" ? "No failed steps in the latest traces." : "No agent traces found yet."}
+                  actionText="Go to Command Center"
+                  actionHref="/dashboard"
+                />
+              </Panel>
+            ) : (
+              <Panel
+                title="Latest steps"
+                flush
+                action={
+                  <span style={{ fontSize: 12, color: "var(--color-text-3)" }}>
+                    {visible.length} shown · {errorCount} with errors
+                  </span>
+                }
+              >
+                <div className="t-wrap">
+                  <table className="t t-loose">
+                    <thead>
+                      <tr>
+                        <th style={{ width: "18%" }}>Time</th>
+                        <th style={{ width: "16%" }}>Run / step</th>
+                        <th style={{ width: "16%" }}>Node</th>
+                        <th>Input and output</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visible.map((t, idx) => (
+                        <tr key={t.id ?? idx}>
+                          <td style={{ color: "var(--color-text-2)" }}>
+                            {t.created_at ? new Date(t.created_at).toLocaleString() : "Unknown"}
+                          </td>
+                          <td>
+                            <div className="mono" style={{ marginBottom: 6, fontSize: 11, color: "var(--color-text-2)" }}>
+                              {t.run_id ? `${t.run_id.substring(0, 8)}…` : "none"}
+                            </div>
+                            <Pill>Step {t.step}</Pill>
+                          </td>
+                          <td>
+                            <div style={{ fontWeight: 500, color: "var(--color-text-1)" }}>{t.node_name}</div>
+                            <div style={{ marginTop: 4, fontSize: 11, color: "var(--color-text-3)" }}>{t.duration_ms} ms</div>
+                          </td>
+                          <td>
+                            {t.error && (
+                              <div style={{ marginBottom: 8 }}>
+                                <Pill tone="danger">Error</Pill>
+                                <div style={{ marginTop: 6, fontSize: 12, color: "var(--color-danger)", overflowWrap: "anywhere" }}>
+                                  {t.error}
+                                </div>
+                              </div>
+                            )}
+                            <div style={{ display: "grid", gap: 8 }}>
+                              <Json title="Input JSON" value={t.input} />
+                              <Json title="Output JSON" value={t.output} />
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Panel>
+            )}
+          </div>
         </main>
       </div>
     </div>

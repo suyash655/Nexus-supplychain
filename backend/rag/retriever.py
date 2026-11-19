@@ -15,9 +15,9 @@ Why hybrid:
 """
 
 import logging
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
-from .ingest import _get_chroma, _get_embedder, DATA_DIR
+from .ingest import _get_chroma, _get_embedder
 
 logger = logging.getLogger("nexus.rag.retriever")
 
@@ -128,7 +128,6 @@ class HybridRetriever:
 
         # ── 1. Vector search ───────────────────────────────────────────────
         query_emb = self._embedder.encode([query]).tolist()
-        where     = None
         if supplier_filter:
             # ChromaDB doesn't support substring match — filter post-retrieval
             pass
