@@ -1,27 +1,49 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import { Search } from "lucide-react";
 import Sidebar from "../components/layout/Sidebar";
 import TopNav from "../components/layout/TopNav";
-import { AnimatedSection, StaggerGrid, StaggerItem } from "../components/Animated";
-import {
-  Dna, Zap, Target, Shield, ArrowRight, AlertTriangle, Search, History
-} from "lucide-react";
-import { apiFetchJSON, apiPostJSON } from "@/lib/api";
+import { KpiCard } from "../components/Cards/KpiCard";
+import { NoData } from "../components/Cards/NoData";
 import { useToast } from "../components/feedback/ToastContext";
+import { Notice, PageHeader, Panel, Pill, type Tone } from "../components/ui/Primitives";
+import { apiFetchJSON, apiPostJSON } from "@/lib/api";
+import { formatNumber } from "@/lib/ui";
 
 type PropagationChain = {
-  node: string; name: string; type: string;
-  propagation_strength?: number; causal_strength?: number; mechanism: string;
+  node: string;
+  name: string;
+  type: string;
+  propagation_strength?: number;
+  causal_strength?: number;
+  mechanism: string;
   causal_chain?: string;
   dependency_path?: string;
   estimated_dollar_impact: number;
 };
 
 type FragilityNode = {
-  id: string; name: string; type: string;
-  fragility_score: number; classification: string;
+  id: string;
+  name: string;
+  type: string;
+  fragility_score: number;
+  classification: string;
 };
+
+const CLASS_TONE: Record<string, Tone> = {
+  EXTREMELY_FRAGILE: "danger",
+  FRAGILE: "warn",
+  ROBUST: "success",
+  ANTIFRAGILE: "info",
+};
+
+/* The backend reports impact in dollars; strings are passed through untouched */
+const money = (v: unknown) =>
+  typeof v === "number" ? `$${v.toLocaleString("en-US")}` : v == null ? "—" : String(v);
+
+const runTone = (assessment?: string) =>
+  assessment === "catastrophic" ? "critical" : assessment === "severe" ? "elevated" : "stable";
 
 export default function CausalPage() {
   const { showToast } = useToast();
@@ -58,15 +80,16 @@ export default function CausalPage() {
       const frag = await apiFetchJSON(`/causal/fragility`);
       setFragility(frag);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unable to build risk propagation graph";
-      setError(message);
-      showToast(message, "error");
+      console.error(err);
+      setError("The risk graph could not be built. Check that data has been uploaded and the server is running, then try again.");
+      showToast("Could not build the risk graph.", "error");
     } finally {
       setBuilding(false);
     }
   };
 
-  const runIntervention = async () => {
+  const runIntervention = async (e?: FormEvent) => {
+    e?.preventDefault();
     const target = interventionTarget.trim();
     if (!target) {
       showToast("Enter a supplier name, node ID, or region first.", "warning");
@@ -75,22 +98,19 @@ export default function CausalPage() {
     setQuerying(true);
     setError(null);
     try {
-      setInterventionResult(await apiFetchJSON(`/causal/intervene?target=${encodeURIComponent(target)}&action=remove`));
+      setInterventionResult(
+        await apiFetchJSON(`/causal/intervene?target=${encodeURIComponent(target)}&action=remove`)
+      );
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Intervention query failed";
-      setError(message);
-      showToast(message, "error");
+      console.error(err);
+      setError("The disruption query failed. Check the target name and try again.");
+      showToast("The disruption query failed.", "error");
     } finally {
       setQuerying(false);
     }
   };
 
-  const classColors: Record<string, string> = {
-    EXTREMELY_FRAGILE: "#ef4444",
-    FRAGILE: "#f97316",
-    ROBUST: "#22c55e",
-    ANTIFRAGILE: "#06b6d4",
-  };
+  const chains: PropagationChain[] = interventionResult?.causal_chains ?? [];
 
   return (
     <div className="app-layout">
@@ -98,262 +118,234 @@ export default function CausalPage() {
       <div className="main-wrapper">
         <TopNav />
         <main className="main-content">
-        {/* Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <Dna size={28} color="#06b6d4" />
-              <h1 style={{ fontSize: 24, fontWeight: 800, letterSpacing: "-0.02em" }}>Risk Propagation Graph</h1>
-            </div>
-            <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 4 }}>
-              Downstream risk propagation — simulate disruptions and trace dependency exposure
-            </p>
-          </div>
-          <button
-            onClick={buildGenome}
-            disabled={building}
-            style={{
-              display: "flex", alignItems: "center", gap: 8,
-              padding: "12px 24px",
-              background: building ? "rgba(6, 182, 212, 0.2)" : "linear-gradient(135deg, #06b6d4, #0891b2)",
-              border: "none", borderRadius: 10, color: "#fff", fontWeight: 700, fontSize: 13,
-              cursor: building ? "wait" : "pointer",
-              boxShadow: "0 0 25px rgba(6, 182, 212, 0.2)",
-              textTransform: "uppercase", letterSpacing: "0.05em",
-            }}
-          >
-            <Dna size={16} /> {building ? "Building graph..." : "Build Risk Graph"}
-          </button>
-        </div>
+          <div className="page-wrap">
+            <PageHeader
+              eyebrow="Intelligence"
+              title="Risk propagation"
+              subtitle="Simulate disruptions and trace downstream dependency exposure"
+              actions={
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={buildGenome}
+                  disabled={building}
+                >
+                  {building ? "Building graph…" : "Build risk graph"}
+                </button>
+              }
+            />
 
-        {error && (
-          <div className="card" style={{ marginBottom: 20, padding: 16, color: "#ef4444", border: "1px solid rgba(239,68,68,0.35)" }}>
-            {error}
-          </div>
-        )}
-
-        {/* Scenario Run History */}
-        <div className="card" style={{ marginBottom: 28, border: "1px solid rgba(139, 92, 246, 0.15)", background: "rgba(139, 92, 246, 0.02)" }}>
-          <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <History size={20} color="#8b5cf6" />
-              <h2 style={{ fontSize: 16, fontWeight: 700 }}>Failure Scenario History</h2>
-              <span style={{ fontSize: 10, color: "#8b5cf6", background: "rgba(139,92,246,0.1)", padding: "2px 8px", borderRadius: 20 }}>WHAT-IF ANALYSIS</span>
-            </div>
-            <p style={{ fontSize: 13, color: "var(--text-secondary)", marginLeft: 20 }}>
-              Historical runs of graph failure simulations triggered from the Graph UI.
-            </p>
-          </div>
-
-          {loadingRuns ? (
-            <div style={{ fontSize: 13, color: "var(--text-muted)", padding: 20, textAlign: "center" }}>Loading scenario history...</div>
-          ) : scenarioRuns.length > 0 ? (
-            <div style={{ overflowX: "auto" }}>
-                <table className="data-table">
-                <thead>
-                    <tr>
-                    <th>Time</th>
-                    <th>Failed Node</th>
-                    <th>Total Affected</th>
-                    <th>Risk Level</th>
-                    <th>Newly Critical</th>
-                    <th>Unreachable SKUs</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {scenarioRuns.map(run => (
-                    <tr key={run.id}>
-                        <td style={{ color: "var(--text-muted)", fontSize: 12 }}>{new Date(run.created_at).toLocaleString()}</td>
-                        <td><span style={{ fontWeight: 500 }}>{run.node_name}</span> <span style={{ color: "var(--text-muted)", fontSize: 11 }}>({run.node_type})</span></td>
-                        <td>{run.total_affected}</td>
-                        <td>
-                        <span className={`risk-badge risk-${run.risk_assessment === 'catastrophic' ? 'critical' : run.risk_assessment === 'severe' ? 'elevated' : 'stable'}`}>
-                            {run.risk_assessment || "unknown"}
-                        </span>
-                        </td>
-                        <td>{run.newly_critical_nodes?.length || 0}</td>
-                        <td>{run.unreachable_skus?.length || 0}</td>
-                    </tr>
-                    ))}
-                </tbody>
-                </table>
-            </div>
-          ) : (
-            <div style={{ padding: 20, textAlign: "center", color: "var(--text-muted)", fontSize: 13, background: "rgba(0,0,0,0.2)", borderRadius: 8 }}>
-              No failure scenarios have been run yet. Go to the Graph view and click "Simulate Failure" on a node.
-            </div>
-          )}
-        </div>
-
-        {/* Build Result Stats */}
-        {buildResult && !buildResult.error && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
-            {[
-              { label: "Graph Nodes", value: buildResult.total_causal_nodes ?? buildResult.total_nodes, color: "#06b6d4" },
-              { label: "Risk Edges", value: buildResult.total_causal_edges ?? buildResult.total_edges, color: "#a78bfa" },
-              { label: "Root Sources", value: buildResult.root_causes?.length ?? buildResult.root_nodes?.length ?? 0, color: "#ef4444" },
-              { label: "Leaf Nodes", value: buildResult.terminal_effects?.length ?? buildResult.leaf_nodes?.length ?? 0, color: "#f59e0b" },
-            ].map(stat => (
-              <div key={stat.label} className="card" style={{ textAlign: "center", padding: 20 }}>
-                <div style={{ fontSize: 32, fontWeight: 800, color: stat.color }}>{stat.value}</div>
-                <div style={{ fontSize: 11, color: "var(--text-muted)", textTransform: "uppercase", letterSpacing: "0.1em" }}>{stat.label}</div>
+            {error && (
+              <div style={{ marginBottom: 24 }}>
+                <Notice tone="danger" title="Something went wrong">
+                  {error}
+                </Notice>
               </div>
-            ))}
-          </div>
-        )}
+            )}
 
-        {/* Risk propagation query */}
-        <div className="card" style={{ marginBottom: 28, border: "1px solid rgba(6, 182, 212, 0.15)", background: "rgba(6, 182, 212, 0.02)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-            <Target size={20} color="#06b6d4" />
-            <h2 style={{ fontSize: 16, fontWeight: 700 }}>Disruption Query</h2>
-            <span style={{ fontSize: 10, color: "#06b6d4", background: "rgba(6,182,212,0.1)", padding: "2px 8px", borderRadius: 20 }}>RISK PROPAGATION</span>
-          </div>
-          <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 16 }}>
-            Ask: &quot;What would happen if we remove this supplier?&quot; and trace downstream exposure.
-          </p>
-
-          <div style={{ display: "flex", gap: 12, marginBottom: 20 }}>
-            <div style={{ position: "relative", flex: 1 }}>
-              <Search size={16} style={{ position: "absolute", left: 12, top: 12, color: "#64748b" }} />
-              <input
-                value={interventionTarget}
-                onChange={e => setInterventionTarget(e.target.value)}
-                placeholder="Enter supplier name, node ID, or region..."
-                style={{
-                  width: "100%", padding: "10px 14px 10px 36px",
-                  background: "rgba(0,0,0,0.3)", border: "1px solid var(--border-subtle)",
-                  borderRadius: 10, color: "#f1f5f9", fontSize: 13, outline: "none",
-                  boxSizing: "border-box",
-                }}
-              />
-            </div>
-            <button
-              onClick={runIntervention}
-              disabled={querying}
-              style={{
-                padding: "10px 20px", background: "#f59e0b", color: "#000",
-                border: "none", borderRadius: 10, fontWeight: 700, cursor: "pointer",
-                display: "flex", alignItems: "center", gap: 6, fontSize: 13,
-              }}
-            >
-              <Zap size={14} /> {querying ? "Querying..." : "Run Intervention"}
-            </button>
-          </div>
-
-          {/* Intervention Results */}
-          {interventionResult && !interventionResult.error && (
-            <div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 16 }}>
-                <div style={{ background: "rgba(239,68,68,0.08)", borderRadius: 10, padding: 14, textAlign: "center" }}>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: "#ef4444" }}>{interventionResult.total_downstream_affected}</div>
-                  <div style={{ fontSize: 10, color: "var(--text-muted)" }}>Downstream Affected</div>
-                </div>
-                <div style={{ background: "rgba(245,158,11,0.08)", borderRadius: 10, padding: 14, textAlign: "center" }}>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: "#f59e0b" }}>{interventionResult.total_estimated_impact}</div>
-                  <div style={{ fontSize: 10, color: "var(--text-muted)" }}>Est. Dollar Impact</div>
-                </div>
-                <div style={{ background: "rgba(34,197,94,0.08)", borderRadius: 10, padding: 14, textAlign: "center" }}>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: "#22c55e" }}>{interventionResult.risk_reduction_if_mitigated}</div>
-                  <div style={{ fontSize: 10, color: "var(--text-muted)" }}>Risk Reduction</div>
-                </div>
+            {buildResult && !buildResult.error && (
+              <div className="kpi-grid">
+                <KpiCard label="Graph nodes" value={buildResult.total_causal_nodes ?? buildResult.total_nodes ?? 0} />
+                <KpiCard label="Risk edges" value={buildResult.total_causal_edges ?? buildResult.total_edges ?? 0} />
+                <KpiCard label="Root sources" value={buildResult.root_causes?.length ?? buildResult.root_nodes?.length ?? 0} />
+                <KpiCard label="Leaf nodes" value={buildResult.terminal_effects?.length ?? buildResult.leaf_nodes?.length ?? 0} />
               </div>
+            )}
 
-              {/* Propagation Chains */}
-              <h3 style={{ fontSize: 13, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 10 }}>Risk Propagation Chains</h3>
-              <div style={{ display: "grid", gap: 8 }}>
-                {interventionResult.causal_chains?.slice(0, 8).map((chain: PropagationChain, i: number) => (
-                  <div key={i} style={{
-                    display: "flex", justifyContent: "space-between", alignItems: "center",
-                    padding: "10px 14px", background: "rgba(0,0,0,0.2)", borderRadius: 8,
-                    border: "1px solid var(--border-subtle)",
-                  }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600 }}>{chain.name}</div>
-                      <div style={{ fontSize: 11, color: "var(--text-muted)" }}>{chain.mechanism}</div>
-                      <div style={{ fontSize: 10, color: "#06b6d4", marginTop: 2 }}>
-                        {chain.dependency_path ?? chain.causal_chain}
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
-                      <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: 12, fontWeight: 700, color: (chain.propagation_strength ?? chain.causal_strength ?? 0) > 0.5 ? "#ef4444" : "#f59e0b" }}>
-                          {((chain.propagation_strength ?? chain.causal_strength ?? 0) * 100).toFixed(0)}%
+            <div className="stack">
+              {/* Disruption query */}
+              <Panel title="Disruption query">
+                <p style={{ marginBottom: 16, fontSize: 13, color: "var(--color-text-2)" }}>
+                  Ask what happens if a supplier, node, or region is removed, and trace the downstream exposure.
+                </p>
+
+                <form onSubmit={runIntervention} className="toolbar" style={{ flexWrap: "nowrap" }}>
+                  <div style={{ position: "relative", flex: 1, minWidth: 0 }}>
+                    <Search
+                      size={15}
+                      aria-hidden="true"
+                      style={{ position: "absolute", left: 14, top: 13, color: "var(--color-text-3)" }}
+                    />
+                    <input
+                      className="input"
+                      aria-label="Disruption target"
+                      value={interventionTarget}
+                      onChange={(e) => setInterventionTarget(e.target.value)}
+                      placeholder="Supplier name, node ID, or region"
+                      style={{ paddingLeft: 38 }}
+                    />
+                  </div>
+                  <button type="submit" className="btn btn-primary" disabled={querying}>
+                    {querying ? "Running…" : "Run intervention"}
+                  </button>
+                </form>
+
+                {interventionResult && !interventionResult.error && (
+                  <div style={{ marginTop: 20 }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 12 }}>
+                      <div className="stat-tile">
+                        <div className="v" style={{ color: "var(--color-danger)" }}>
+                          {interventionResult.total_downstream_affected ?? "—"}
                         </div>
-                        <div style={{ fontSize: 9, color: "var(--text-muted)" }}>Strength</div>
+                        <div className="l">Downstream affected</div>
                       </div>
-                      <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: 12, fontWeight: 700 }}>${chain.estimated_dollar_impact?.toLocaleString()}</div>
-                        <div style={{ fontSize: 9, color: "var(--text-muted)" }}>Impact</div>
+                      <div className="stat-tile">
+                        <div className="v" style={{ color: "var(--color-warn)" }}>
+                          {money(interventionResult.total_estimated_impact)}
+                        </div>
+                        <div className="l">Est. dollar impact</div>
+                      </div>
+                      <div className="stat-tile">
+                        <div className="v" style={{ color: "var(--color-ok)" }}>
+                          {interventionResult.risk_reduction_if_mitigated ?? "—"}
+                        </div>
+                        <div className="l">Risk reduction</div>
                       </div>
                     </div>
+
+                    <h3 className="text-micro" style={{ margin: "24px 0 8px" }}>Risk propagation chains</h3>
+                    {chains.length > 0 ? (
+                      <div>
+                        {chains.slice(0, 8).map((chain, i) => {
+                          const strength = chain.propagation_strength ?? chain.causal_strength ?? 0;
+                          return (
+                            <div
+                              key={i}
+                              className="list-row"
+                              style={{ alignItems: "flex-start", borderBottom: "1px solid var(--color-border)", borderRadius: 0 }}
+                            >
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-1)" }}>{chain.name}</div>
+                                <div style={{ marginTop: 2, fontSize: 12, color: "var(--color-text-2)" }}>{chain.mechanism}</div>
+                                <div className="mono" style={{ marginTop: 4, fontSize: 11, color: "var(--color-text-3)", overflowWrap: "anywhere" }}>
+                                  {chain.dependency_path ?? chain.causal_chain}
+                                </div>
+                              </div>
+                              <div style={{ display: "flex", gap: 24, flexShrink: 0, textAlign: "right" }}>
+                                <div>
+                                  <div style={{ fontSize: 13, fontWeight: 500, color: strength > 0.5 ? "var(--color-danger)" : "var(--color-warn)" }}>
+                                    {(strength * 100).toFixed(0)}%
+                                  </div>
+                                  <div className="text-micro">Strength</div>
+                                </div>
+                                <div>
+                                  <div style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-1)" }}>
+                                    {money(chain.estimated_dollar_impact)}
+                                  </div>
+                                  <div className="text-micro">Impact</div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <NoData height={100} msg="No propagation chains were returned for this target." />
+                    )}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-          {interventionResult?.error && (
-            <div style={{ padding: 14, background: "rgba(239,68,68,0.1)", borderRadius: 8, color: "#ef4444", fontSize: 13 }}>
-              {interventionResult.error}
-            </div>
-          )}
-        </div>
+                )}
 
-        {/* Fragility Report — Taleb-Inspired */}
-        {fragility && !fragility.error && (
-          <div className="card" style={{ border: "1px solid rgba(236, 72, 153, 0.15)" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-              <Shield size={20} color="#ec4899" />
-              <h2 style={{ fontSize: 16, fontWeight: 700 }}>Fragility Report</h2>
-              <span style={{ fontSize: 10, color: "#ec4899", background: "rgba(236,72,153,0.1)", padding: "2px 8px", borderRadius: 20 }}>TALEB FRAMEWORK</span>
-            </div>
-            
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 20 }}>
-              {[
-                { label: "Fragile", value: fragility.fragile_count, color: "#ef4444" },
-                { label: "Robust", value: fragility.robust_count, color: "#22c55e" },
-                { label: "Antifragile", value: fragility.antifragile_count, color: "#06b6d4" },
-                { label: "System Index", value: fragility.system_fragility_index?.toFixed(2), color: "#f59e0b" },
-              ].map(s => (
-                <div key={s.label} style={{ background: "rgba(0,0,0,0.2)", borderRadius: 10, padding: 14, textAlign: "center" }}>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: s.color }}>{s.value}</div>
-                  <div style={{ fontSize: 10, color: "var(--text-muted)", textTransform: "uppercase" }}>{s.label}</div>
-                </div>
-              ))}
-            </div>
+                {interventionResult?.error && (
+                  <div style={{ marginTop: 16 }}>
+                    <Notice tone="danger" title="No result">
+                      {String(interventionResult.error)}
+                    </Notice>
+                  </div>
+                )}
+              </Panel>
 
-            <h3 style={{ fontSize: 13, fontWeight: 700, color: "var(--text-muted)", textTransform: "uppercase", marginBottom: 10 }}>Most Fragile Nodes</h3>
-            <div style={{ display: "grid", gap: 6 }}>
-              {fragility.most_fragile?.slice(0, 6).map((n: FragilityNode) => (
-                <div key={n.id} style={{
-                  display: "flex", justifyContent: "space-between", alignItems: "center",
-                  padding: "8px 14px", background: "rgba(0,0,0,0.15)", borderRadius: 8,
-                }}>
+              {/* Fragility report */}
+              {fragility && !fragility.error && (
+                <Panel title="Fragility report" delay={0.05}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12 }}>
+                    <div className="stat-tile"><div className="v" style={{ color: "var(--color-danger)" }}>{fragility.fragile_count ?? 0}</div><div className="l">Fragile</div></div>
+                    <div className="stat-tile"><div className="v" style={{ color: "var(--color-ok)" }}>{fragility.robust_count ?? 0}</div><div className="l">Robust</div></div>
+                    <div className="stat-tile"><div className="v" style={{ color: "#7fb0ff" }}>{fragility.antifragile_count ?? 0}</div><div className="l">Antifragile</div></div>
+                    <div className="stat-tile"><div className="v">{fragility.system_fragility_index?.toFixed(2) ?? "—"}</div><div className="l">System index</div></div>
+                  </div>
+
+                  <h3 className="text-micro" style={{ margin: "24px 0 8px" }}>Most fragile nodes</h3>
                   <div>
-                    <span style={{ fontSize: 13, fontWeight: 600 }}>{n.name}</span>
-                    <span style={{ fontSize: 10, color: "var(--text-muted)", marginLeft: 8 }}>{n.type}</span>
+                    {(fragility.most_fragile as FragilityNode[] | undefined)?.slice(0, 6).map((n) => (
+                      <div key={n.id} className="list-row">
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <span style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-1)" }}>{n.name}</span>
+                          <span style={{ marginLeft: 8, fontSize: 11, color: "var(--color-text-3)" }}>{n.type}</span>
+                        </div>
+                        <Pill tone={CLASS_TONE[n.classification] ?? "neutral"}>
+                          {n.classification.replace(/_/g, " ").toLowerCase()} · {n.fragility_score}
+                        </Pill>
+                      </div>
+                    ))}
                   </div>
-                  <span style={{
-                    fontSize: 11, fontWeight: 700, padding: "3px 10px", borderRadius: 20,
-                    background: `${classColors[n.classification] || "#64748b"}20`,
-                    color: classColors[n.classification] || "#64748b",
-                  }}>
-                    {n.classification} ({n.fragility_score})
-                  </span>
-                </div>
-              ))}
+                </Panel>
+              )}
+
+              {!buildResult && !building && (
+                <Panel>
+                  <NoData
+                    height={220}
+                    msg="The risk graph has not been built yet. Upload supply chain data, then choose Build risk graph to map downstream exposure."
+                  />
+                </Panel>
+              )}
+
+              {/* Scenario history */}
+              <Panel title="Failure scenario history" flush delay={0.05}>
+                {loadingRuns ? (
+                  <div style={{ padding: 20, display: "grid", gap: 10 }}>
+                    {Array.from({ length: 3 }).map((_, i) => (
+                      <div key={i} className="skeleton" style={{ height: 34 }} />
+                    ))}
+                  </div>
+                ) : scenarioRuns.length > 0 ? (
+                  <div className="t-wrap">
+                    <table className="t">
+                      <thead>
+                        <tr>
+                          <th>Time</th>
+                          <th>Failed node</th>
+                          <th className="num">Total affected</th>
+                          <th>Risk level</th>
+                          <th className="num">Newly critical</th>
+                          <th className="num">Unreachable SKUs</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {scenarioRuns.map((run) => (
+                          <tr key={run.id}>
+                            <td style={{ color: "var(--color-text-2)" }}>{new Date(run.created_at).toLocaleString()}</td>
+                            <td>
+                              {run.node_name}
+                              <span style={{ marginLeft: 8, fontSize: 11, color: "var(--color-text-3)" }}>{run.node_type}</span>
+                            </td>
+                            <td className="num">{formatNumber(run.total_affected)}</td>
+                            <td>
+                              <span className={`risk-badge risk-${runTone(run.risk_assessment)}`}>
+                                {run.risk_assessment || "unknown"}
+                              </span>
+                            </td>
+                            <td className="num">{run.newly_critical_nodes?.length || 0}</td>
+                            <td className="num">{run.unreachable_skus?.length || 0}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div style={{ padding: 20 }}>
+                    <NoData
+                      height={120}
+                      msg="No failure scenarios have been run yet. Open the Graph Network and choose Simulate failure on a node."
+                      actionText="Open graph network"
+                      actionHref="/graph"
+                    />
+                  </div>
+                )}
+              </Panel>
             </div>
           </div>
-        )}
-
-        {!buildResult && (
-          <div className="card" style={{ textAlign: "center", padding: 60, color: "var(--text-muted)" }}>
-            <Dna size={48} color="#1e293b" style={{ marginBottom: 16 }} />
-            <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 8 }}>Risk Graph Not Built Yet</p>
-            <p style={{ fontSize: 13 }}>Upload supply chain data, then click &quot;Build Risk Graph&quot; to map downstream exposure.</p>
-          </div>
-        )}
-      </main>
+        </main>
       </div>
     </div>
   );

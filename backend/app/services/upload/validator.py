@@ -5,9 +5,10 @@ Validates and sanitizes raw DataFrame values before DB insertion.
 """
 
 import warnings
-import pandas as pd  # type: ignore
+from typing import Dict, Optional
+
 import numpy as np  # type: ignore
-from typing import Optional, Dict
+import pandas as pd  # type: ignore
 
 # Suppress pandas date parsing warnings
 warnings.filterwarnings("ignore", category=UserWarning, message=".*Parsing dates.*")
@@ -20,19 +21,19 @@ def _clean_currency_value(v) -> Optional[float]:
     """
     if v is None:
         return None
-    
+
     cleaned = str(v).strip()
-    
+
     # Remove currency symbols
     for symbol in ['$', '€', '£', '¥', '₹', 'R$', 'AUD', 'USD', 'EUR', 'GBP']:
         cleaned = cleaned.replace(symbol, '')
-    
+
     # Handle different number formats
     if ',' in cleaned and '.' in cleaned:
         # Could be European (1.234,56) or US/Indian (1,234.56 or 1,00,000.00)
         parts_comma = cleaned.split(',')
-        parts_dot = cleaned.split('.')
-        
+        cleaned.split('.')
+
         # European format detection: comma is decimal, dot is thousand separator
         # Pattern: part after comma is exactly 2 digits (typical decimal precision)
         # AND part after dot has more than 2 digits (indicating it's a thousand separator)
@@ -51,7 +52,7 @@ def _clean_currency_value(v) -> Optional[float]:
         else:
             # Thousand separator (US or Indian)
             cleaned = cleaned.replace(',', '')
-    
+
     try:
         return float(cleaned)
     except (ValueError, TypeError):
@@ -84,11 +85,11 @@ def safe_float(val, default=0.0) -> float:
     try:
         if val is None:
             return default
-        
+
         cleaned_val = _clean_currency_value(val)
         if cleaned_val is None:
             return default
-        
+
         f = float(cleaned_val)
         if np.isnan(f) or np.isinf(f):
             return default

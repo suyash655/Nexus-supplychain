@@ -24,7 +24,6 @@ The match algorithm:
 
 from typing import Dict, List, Optional
 
-
 # Each entry:
 #   "signature"  : columns that uniquely identify this schema (normalised)
 #   "mapping"    : {normalised_source_column: internal_field}

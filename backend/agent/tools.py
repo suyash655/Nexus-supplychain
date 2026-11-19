@@ -6,9 +6,8 @@ wrapped by LangGraph nodes — no @tool decorator needed since we call them
 directly inside graph nodes.
 """
 
-import json
 import logging
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("nexus.agent.tools")
 
@@ -25,8 +24,8 @@ def retrieve_documents(
     Returns up to top_k chunks as dicts with text, doc_name, rerank_score.
     """
     try:
+        from rag.reranker import rerank  # type: ignore
         from rag.retriever import get_retriever  # type: ignore
-        from rag.reranker  import rerank         # type: ignore
 
         retriever = get_retriever()
         raw = retriever.retrieve(query, supplier_filter=supplier_filter)

@@ -5,20 +5,19 @@ Abstract connector interface + implementations for CSV, Database, S3, and API so
 This is what separates a "script" from a "platform."
 """
 
-import os
+import hashlib
 import io
 import json
-import hashlib
+import os
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
 
 import pandas as pd  # type: ignore
-from sqlalchemy import Column, Integer, String, DateTime, JSON, Boolean, Text  # type: ignore
+from sqlalchemy import JSON, Boolean, Column, DateTime, Integer, String, Text  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
 
 from app.models import Base  # type: ignore
-
 
 # ──────────────────────────────────────────────
 # Connector Model (persisted configuration)
@@ -69,7 +68,7 @@ class BaseConnector(ABC):
     """Abstract base class for all data connectors."""
 
     connector_type: str = "base"
-    
+
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.metadata: Dict[str, Any] = {}
@@ -142,12 +141,12 @@ class CSVConnector(BaseConnector):
             if file_type == "xlsx":
                 return pd.read_excel(io.BytesIO(content))
             return pd.read_csv(io.BytesIO(content) if isinstance(content, bytes) else io.StringIO(content))
-        
+
         if file_path:
             if file_path.endswith(".xlsx"):
                 return pd.read_excel(file_path)
             return pd.read_csv(file_path)
-        
+
         raise ValueError("No file content or path provided")
 
 
@@ -176,7 +175,7 @@ class DatabaseConnector(BaseConnector):
         conn_str = self.config.get("connection_string", "")
         query = self.config.get("query", "")
         table = self.config.get("table", "")
-        
+
         eng = create_engine(conn_str)
         if query:
             return pd.read_sql(query, eng)
@@ -217,10 +216,10 @@ class S3Connector(BaseConnector):
         )
         bucket = self.config.get("bucket", "")
         key = self.config.get("key", "")
-        
+
         obj = s3.get_object(Bucket=bucket, Key=key)
         content = obj["Body"].read()
-        
+
         if key.endswith(".csv"):
             return pd.read_csv(io.BytesIO(content))
         elif key.endswith(".json"):
@@ -262,7 +261,7 @@ class APIConnector(BaseConnector):
         req = urllib.request.Request(url)
         for k, v in headers.items():
             req.add_header(k, v)
-        
+
         with urllib.request.urlopen(req, timeout=30) as resp:
             data = json.loads(resp.read().decode())
 
@@ -282,12 +281,11 @@ class APIConnector(BaseConnector):
 
 
 # ──────────────────────────────────────────────
-from app.connectors.sap_connector import SAPConnector
 from app.connectors.mes_connector import MESConnector
-from app.connectors.wms_connector import WMSConnector
+from app.connectors.sap_connector import SAPConnector
 from app.connectors.tms_connector import TMSConnector
 from app.connectors.universal_connector import UniversalRESTConnector, UniversalSOAPConnector
-
+from app.connectors.wms_connector import WMSConnector
 
 # Connector Registry
 # ──────────────────────────────────────────────

@@ -1,7 +1,8 @@
 import math
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 import pandas as pd
-from typing import Dict, List, Any, Optional, Tuple
 
 
 def _safe(val: float, default: float = 0.0) -> float:
