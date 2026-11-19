@@ -12,22 +12,20 @@ Endpoints:
   DELETE /api/batch/jobs/{job_id}           — Delete a job and its results
 """
 
+import asyncio
 import logging
 import uuid
-import asyncio
 from datetime import datetime, timezone
-from typing import Optional, List, Dict, Any
 from enum import Enum
+from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks  # type: ignore
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query  # type: ignore
 from pydantic import BaseModel, Field  # type: ignore
-from sqlalchemy.orm import Session  # type: ignore
 
-from app.core.dependencies import get_db, require_auth  # type: ignore
+from app.core.dependencies import require_auth  # type: ignore
 from app.core.errors import (  # type: ignore
-    NotFoundError,
-    ValidationError,
     InvalidOperationError,
+    NotFoundError,
     ServiceUnavailableError,
 )
 
@@ -86,11 +84,11 @@ class BatchJobResponse(BaseModel):
 
 class JobStore:
     """In-memory storage for batch jobs."""
-    
+
     def __init__(self):
         self.jobs: Dict[str, Dict[str, Any]] = {}
         self.lock = asyncio.Lock()
-    
+
     async def create_job(self, job_data: Dict[str, Any]) -> str:
         """Create a new job."""
         job_id = str(uuid.uuid4())
@@ -98,17 +96,17 @@ class JobStore:
         job_data["created_at"] = datetime.now(timezone.utc).isoformat()
         job_data["progress"] = 0.0
         job_data["retry_count"] = 0
-        
+
         async with self.lock:
             self.jobs[job_id] = job_data
-        
+
         return job_id
-    
+
     async def get_job(self, job_id: str) -> Optional[Dict[str, Any]]:
         """Get a job by ID."""
         async with self.lock:
             return self.jobs.get(job_id)
-    
+
     async def update_job(self, job_id: str, updates: Dict[str, Any]) -> bool:
         """Update a job."""
         async with self.lock:
@@ -116,20 +114,20 @@ class JobStore:
                 self.jobs[job_id].update(updates)
                 return True
             return False
-    
+
     async def list_jobs(self, status: Optional[JobStatus] = None, limit: int = 50) -> List[Dict[str, Any]]:
         """List jobs, optionally filtered by status."""
         async with self.lock:
             jobs = list(self.jobs.values())
-            
+
             if status:
                 jobs = [j for j in jobs if j.get("status") == status]
-            
+
             # Sort by created_at descending
             jobs.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-            
+
             return jobs[:limit]
-    
+
     async def delete_job(self, job_id: str) -> bool:
         """Delete a job."""
         async with self.lock:
@@ -152,15 +150,15 @@ async def process_job(job_id: str):
             "status": JobStatus.RUNNING,
             "started_at": datetime.now(timezone.utc).isoformat()
         })
-        
+
         # Get job details
         job = await job_store.get_job(job_id)
         if not job:
             return
-        
+
         job_type = job.get("job_type")
         parameters = job.get("parameters", {})
-        
+
         # Simulate processing based on job type
         if job_type == JobType.BULK_UPLOAD:
             await _process_bulk_upload(job_id, parameters)
@@ -176,16 +174,16 @@ async def process_job(job_id: str):
             await _process_cleanup(job_id, parameters)
         else:
             raise InvalidOperationError(f"Unknown job type: {job_type}")
-        
+
         # Mark as completed
         await job_store.update_job(job_id, {
             "status": JobStatus.COMPLETED,
             "completed_at": datetime.now(timezone.utc).isoformat(),
             "progress": 100.0
         })
-        
+
         logger.info("[NEXUS] Job %s completed successfully", job_id)
-        
+
     except Exception as e:
         logger.error("[NEXUS] Job %s failed: %s", job_id, e, exc_info=True)
         await job_store.update_job(job_id, {
@@ -201,7 +199,7 @@ async def _process_bulk_upload(job_id: str, parameters: Dict[str, Any]):
     for i in range(1, 6):
         await asyncio.sleep(1)  # Simulate work
         await job_store.update_job(job_id, {"progress": i * 20.0})
-    
+
     # Return mock result
     await job_store.update_job(job_id, {
         "result": {
@@ -218,7 +216,7 @@ async def _process_bulk_delete(job_id: str, parameters: Dict[str, Any]):
     for i in range(1, 6):
         await asyncio.sleep(0.5)
         await job_store.update_job(job_id, {"progress": i * 20.0})
-    
+
     await job_store.update_job(job_id, {
         "result": {
             "records_deleted": parameters.get("record_count", 0),
@@ -232,7 +230,7 @@ async def _process_bulk_update(job_id: str, parameters: Dict[str, Any]):
     for i in range(1, 6):
         await asyncio.sleep(0.5)
         await job_store.update_job(job_id, {"progress": i * 20.0})
-    
+
     await job_store.update_job(job_id, {
         "result": {
             "records_updated": parameters.get("record_count", 0),
@@ -246,7 +244,7 @@ async def _process_data_export(job_id: str, parameters: Dict[str, Any]):
     for i in range(1, 6):
         await asyncio.sleep(0.8)
         await job_store.update_job(job_id, {"progress": i * 20.0})
-    
+
     await job_store.update_job(job_id, {
         "result": {
             "export_format": parameters.get("format", "csv"),
@@ -263,7 +261,7 @@ async def _process_analysis(job_id: str, parameters: Dict[str, Any]):
     for i in range(1, 11):
         await asyncio.sleep(0.3)
         await job_store.update_job(job_id, {"progress": i * 10.0})
-    
+
     await job_store.update_job(job_id, {
         "result": {
             "analysis_type": parameters.get("analysis_type", "standard"),
@@ -278,7 +276,7 @@ async def _process_cleanup(job_id: str, parameters: Dict[str, Any]):
     for i in range(1, 6):
         await asyncio.sleep(0.2)
         await job_store.update_job(job_id, {"progress": i * 20.0})
-    
+
     await job_store.update_job(job_id, {
         "result": {
             "temp_files_deleted": 25,
@@ -298,7 +296,7 @@ async def create_batch_job(
 ):
     """
     Create a new batch job.
-    
+
     Jobs are processed asynchronously in the background.
     """
     try:
@@ -311,18 +309,18 @@ async def create_batch_job(
             "parameters": job.parameters,
             "created_by": user.get("id", "unknown"),
         }
-        
+
         job_id = await job_store.create_job(job_data)
-        
+
         # Start background processing
         background_tasks.add_task(process_job, job_id)
-        
+
         logger.info("[NEXUS] Batch job %s created by user %s", job_id, user.get("id", "unknown"))
-        
+
         # Return job details
         job_response = await job_store.get_job(job_id)
         return BatchJobResponse(**job_response)
-        
+
     except Exception as e:
         logger.error("[NEXUS] Failed to create batch job: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to create batch job: {str(e)}")
@@ -337,10 +335,10 @@ async def get_batch_job(
     Get the status and details of a specific batch job.
     """
     job = await job_store.get_job(job_id)
-    
+
     if not job:
         raise NotFoundError(f"Job {job_id} not found")
-    
+
     return BatchJobResponse(**job)
 
 
@@ -354,7 +352,7 @@ async def list_batch_jobs(
     List all batch jobs, optionally filtered by status.
     """
     jobs = await job_store.list_jobs(status=status, limit=limit)
-    
+
     return {
         "jobs": [BatchJobResponse(**job) for job in jobs],
         "total": len(jobs),
@@ -371,21 +369,21 @@ async def cancel_batch_job(
     Cancel a running or pending batch job.
     """
     job = await job_store.get_job(job_id)
-    
+
     if not job:
         raise NotFoundError(f"Job {job_id} not found")
-    
+
     if job["status"] in [JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED]:
         raise InvalidOperationError(f"Cannot cancel job in {job['status']} status")
-    
+
     # Update job status
     await job_store.update_job(job_id, {
         "status": JobStatus.CANCELLED,
         "completed_at": datetime.now(timezone.utc).isoformat()
     })
-    
+
     logger.info("[NEXUS] Job %s cancelled by user %s", job_id, user.get("id", "unknown"))
-    
+
     return {
         "status": "success",
         "job_id": job_id,
@@ -403,18 +401,18 @@ async def retry_batch_job(
     Retry a failed batch job.
     """
     job = await job_store.get_job(job_id)
-    
+
     if not job:
         raise NotFoundError(f"Job {job_id} not found")
-    
+
     if job["status"] != JobStatus.FAILED:
         raise InvalidOperationError(f"Can only retry failed jobs. Current status: {job['status']}")
-    
+
     # Check retry limit
     retry_count = job.get("retry_count", 0)
     if retry_count >= 3:
         raise InvalidOperationError("Maximum retry limit (3) exceeded")
-    
+
     # Reset job for retry
     await job_store.update_job(job_id, {
         "status": JobStatus.RETRYING,
@@ -424,12 +422,12 @@ async def retry_batch_job(
         "error": None,
         "retry_count": retry_count + 1
     })
-    
+
     # Start background processing
     background_tasks.add_task(process_job, job_id)
-    
+
     logger.info("[NEXUS] Job %s retry %d started by user %s", job_id, retry_count + 1, user.get("id", "unknown"))
-    
+
     return {
         "status": "success",
         "job_id": job_id,
@@ -445,25 +443,25 @@ async def delete_batch_job(
 ):
     """
     Delete a batch job and its results.
-    
+
     Only completed, failed, or cancelled jobs can be deleted.
     """
     job = await job_store.get_job(job_id)
-    
+
     if not job:
         raise NotFoundError(f"Job {job_id} not found")
-    
+
     if job["status"] in [JobStatus.PENDING, JobStatus.RUNNING, JobStatus.RETRYING]:
         raise InvalidOperationError(f"Cannot delete job in {job['status']} status. Cancel it first.")
-    
+
     # Delete job
     deleted = await job_store.delete_job(job_id)
-    
+
     if not deleted:
         raise ServiceUnavailableError("Failed to delete job")
-    
+
     logger.info("[NEXUS] Job %s deleted by user %s", job_id, user.get("id", "unknown"))
-    
+
     return {
         "status": "success",
         "job_id": job_id,
