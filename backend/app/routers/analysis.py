@@ -7,8 +7,8 @@ API endpoints for tracking analysis progress and status.
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.core.dependencies import get_db, require_auth
 from app.core.analysis_coordinator import coordinator
+from app.core.dependencies import get_db, require_auth
 
 router = APIRouter(prefix="/analysis", tags=["Analysis"])
 
@@ -21,10 +21,10 @@ def get_analysis_progress(
 ):
     """Get analysis progress for a specific upload."""
     progress = coordinator.get_progress(upload_id)
-    
+
     if not progress:
         raise HTTPException(status_code=404, detail="Analysis not found")
-    
+
     return progress
 
 
@@ -36,8 +36,8 @@ def cancel_analysis(
 ):
     """Cancel an ongoing analysis."""
     success = coordinator.cancel_analysis(upload_id)
-    
+
     if not success:
         raise HTTPException(status_code=404, detail="Analysis not found or already completed")
-    
+
     return {"status": "cancelled", "upload_id": upload_id}

@@ -5,7 +5,7 @@ import Sidebar from "../components/layout/Sidebar";
 import TopNav from "../components/layout/TopNav";
 import { useToast } from "../components/feedback/ToastContext";
 import { apiFetch } from "@/lib/api";
-import { Download, FileSpreadsheet, FileJson, Table } from "lucide-react";
+import { Download, FileSpreadsheet, FileJson, Table, FileText } from "lucide-react";
 
 export default function ExportPage() {
     const { showToast } = useToast();
@@ -28,6 +28,39 @@ export default function ExportPage() {
             showToast(`${type.toUpperCase()} file downloaded successfully!`, "success");
         } catch {
             showToast("No data to export. Upload data first.", "warning");
+        } finally {
+            setDownloading(null);
+        }
+    };
+
+    const downloadMemo = async (format: "markdown" | "json") => {
+        setDownloading(`memo-${format}`);
+        try {
+            const res = await apiFetch(`/export/executive-memo?format=${format}`);
+            if (!res.ok) throw new Error("No data");
+
+            if (format === "markdown") {
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "nexus_executive_risk_memo.md";
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast("Executive Memo downloaded as Markdown!", "success");
+            } else {
+                const data = await res.json();
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "nexus_executive_risk_memo.json";
+                a.click();
+                URL.revokeObjectURL(url);
+                showToast("Executive Memo downloaded as JSON!", "success");
+            }
+        } catch {
+            showToast("No data to export. Upload data and run analysis first.", "warning");
         } finally {
             setDownloading(null);
         }
@@ -146,6 +179,65 @@ export default function ExportPage() {
                             {downloading === "json" ? "Downloading..." : "Download JSON for Power BI"}
                             <Download size={14} />
                         </button>
+                    </div>
+
+                    {/* Executive Risk Memo */}
+                    <div className="card" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                            <div
+                                style={{
+                                    width: 48, height: 48, borderRadius: 12,
+                                    background: "rgba(34, 197, 94, 0.1)",
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                }}
+                            >
+                                <FileText size={22} color="#22c55e" />
+                            </div>
+                            <div>
+                                <div style={{ fontWeight: 600, fontSize: 16 }}>Executive Risk Memo</div>
+                                <div style={{ fontSize: 12, color: "var(--text-muted)" }}>CSCO &amp; Board-ready risk synthesis</div>
+                            </div>
+                        </div>
+                        <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.6 }}>
+                            A high-level decision memorandum synthesizing supply chain vulnerabilities, top 5 at-risk vendors,
+                            and prioritized mitigation directives for executive stakeholders.
+                        </div>
+                        <ul style={{ fontSize: 12, color: "var(--text-secondary)", paddingLeft: 16 }}>
+                            <li>Fleet health metrics (Critical vs. Stable suppliers)</li>
+                            <li>Top 5 single-point-of-failure vulnerabilities</li>
+                            <li>Actionable strategic containment directives</li>
+                            <li>In-memory data privacy guarantee documentation</li>
+                        </ul>
+                        <div style={{ marginTop: "auto", display: "flex", gap: 10 }}>
+                            <button
+                                onClick={() => downloadMemo("markdown")}
+                                disabled={downloading?.startsWith("memo")}
+                                style={{
+                                    flex: 1, background: "#22c55e", color: "#000",
+                                    border: "none", borderRadius: 10, padding: "12px 14px",
+                                    fontWeight: 600, cursor: "pointer", fontSize: 12,
+                                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                                    opacity: downloading?.startsWith("memo") ? 0.6 : 1,
+                                }}
+                            >
+                                {downloading === "memo-markdown" ? "Exporting…" : "Markdown"}
+                                <Download size={13} />
+                            </button>
+                            <button
+                                onClick={() => downloadMemo("json")}
+                                disabled={downloading?.startsWith("memo")}
+                                style={{
+                                    flex: 1, background: "rgba(255,255,255,0.06)", color: "var(--text-primary)",
+                                    border: "1px solid var(--color-border-subtle)", borderRadius: 10, padding: "12px 14px",
+                                    fontWeight: 600, cursor: "pointer", fontSize: 12,
+                                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                                    opacity: downloading?.startsWith("memo") ? 0.6 : 1,
+                                }}
+                            >
+                                {downloading === "memo-json" ? "Exporting…" : "JSON"}
+                                <Download size={13} />
+                            </button>
+                        </div>
                     </div>
                 </div>
 

@@ -1,5 +1,5 @@
-from typing import Optional, List
 from pydantic import BaseModel
+
 
 class UserLogin(BaseModel):
     username: str
