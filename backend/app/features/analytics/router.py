@@ -2,17 +2,15 @@
 NEXUS — Analytics Router
 """
 
-from datetime import datetime, timezone
-from typing import Dict, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query  # type: ignore
 from pydantic import BaseModel, Field  # type: ignore
+from sqlalchemy import func  # type: ignore
 from sqlalchemy.orm import Session  # type: ignore
-from sqlalchemy import func, text  # type: ignore
 
 from app.core.dependencies import get_db, require_auth  # type: ignore
-from app.models import SupplyData, WorldEvent  # type: ignore
 from app.core.orchestrator import get_analysis_result  # type: ignore
+from app.models import SupplyData, WorldEvent  # type: ignore
 from app.utils.supply_metrics import completeness_score  # type: ignore
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
@@ -123,7 +121,7 @@ def supplier_analytics(
         }
         for r in rows
     ]
-    
+
     return {
         "data": data,
         "total": total,
@@ -217,8 +215,8 @@ def get_kpis(db: Session = Depends(get_db), user: dict = Depends(require_auth)):
     cached = get_analysis_result(db, "kpis")
     if cached:
         return cached
-    from app.main import engines  # type: ignore
     from app.core.orchestrator import _load_dataframe, save_analysis_result  # type: ignore
+    from app.main import engines  # type: ignore
     df = _load_dataframe()
     if df.empty:
         raise HTTPException(status_code=400, detail="No data available. Upload data first.")
@@ -247,7 +245,7 @@ def data_quality(db: Session = Depends(get_db), user: dict = Depends(require_aut
       total_records  — total row count
     """
     import pandas as pd  # type: ignore
-    import numpy as np  # type: ignore
+
     from app.core.orchestrator import _load_dataframe  # type: ignore
 
     df = _load_dataframe()

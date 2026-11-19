@@ -5,13 +5,13 @@ REST API endpoints for what-if scenario analysis,
 real-time rebalancing, and DDMRP capabilities.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
-from typing import Dict, List, Any, Optional
-from pydantic import BaseModel
-import pandas as pd
+from typing import Any, Dict, List, Optional
 
-from app.core.dependencies import get_db, get_current_user
+import pandas as pd
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
+
+from app.core.dependencies import get_current_user
 from app.engines.response_planning import ResponsePlanningEngine, ScenarioType
 
 router = APIRouter(prefix="/ibp/response", tags=["Response Planning"])
@@ -65,12 +65,12 @@ async def initialize_response_planning(
     """
     try:
         result = response_engine.initialize(config)
-        
+
         if result.get("status") != "success":
             raise HTTPException(status_code=500, detail=result.get("error"))
-        
+
         return result
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -82,7 +82,7 @@ async def create_scenario(
 ):
     """
     Create what-if scenario for planning analysis.
-    
+
     Supports demand, supply, network, financial, and capacity scenarios
     with impact analysis and recommendations.
     """
@@ -92,22 +92,22 @@ async def create_scenario(
             scenario_type = ScenarioType(request.scenario_type.lower())
         except ValueError:
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail=f"Invalid scenario type. Must be one of: {[t.value for t in ScenarioType]}"
             )
-        
+
         result = response_engine.create_what_if_scenario(
             base_plan=request.base_plan,
             scenario_changes=request.scenario_changes,
             scenario_type=scenario_type,
             scenario_name=request.scenario_name
         )
-        
+
         if result.get("status") != "success":
             raise HTTPException(status_code=500, detail=result.get("error"))
-        
+
         return result
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -121,25 +121,25 @@ async def setup_ddmrp_buffers(
 ):
     """
     Setup DDMRP buffers for demand-driven replenishment.
-    
+
     Calculates buffer zones (green, yellow, red) based on
     demand profiles and lead times for each SKU-location combination.
     """
     try:
         # Convert inventory data to DataFrame
         df = pd.DataFrame(request.inventory_data)
-        
+
         result = response_engine.setup_ddmrp_buffers(
             inventory_data=df,
             demand_profiles=request.demand_profiles,
             lead_times=request.lead_times
         )
-        
+
         if result.get("status") != "success":
             raise HTTPException(status_code=500, detail=result.get("error"))
-        
+
         return result
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -151,7 +151,7 @@ async def adjust_ddmrp_buffers(
 ):
     """
     Dynamically adjust DDMRP buffers based on changing conditions.
-    
+
     Recalculates buffer zones when demand patterns or lead times change.
     """
     try:
@@ -160,12 +160,12 @@ async def adjust_ddmrp_buffers(
             demand_changes=request.demand_changes,
             lead_time_changes=request.lead_time_changes
         )
-        
+
         if result.get("status") != "success":
             raise HTTPException(status_code=500, detail=result.get("error"))
-        
+
         return result
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -177,25 +177,25 @@ async def real_time_rebalancing(
 ):
     """
     Perform real-time network rebalancing.
-    
+
     Optimizes inventory distribution across the network based on
     demand forecasts and transportation costs.
     """
     try:
         # Convert inventory data to DataFrame
         df = pd.DataFrame(request.inventory_data)
-        
+
         result = response_engine.real_time_rebalancing(
             inventory_data=df,
             demand_forecast=request.demand_forecast,
             transportation_matrix=request.transportation_matrix
         )
-        
+
         if result.get("status") != "success":
             raise HTTPException(status_code=500, detail=result.get("error"))
-        
+
         return result
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -207,7 +207,7 @@ async def constraint_based_scheduling(
 ):
     """
     Perform constraint-based production scheduling.
-    
+
     Schedules production requests while respecting capacity,
     material, and time constraints.
     """
@@ -216,12 +216,12 @@ async def constraint_based_scheduling(
             production_requests=request.production_requests,
             constraints=request.constraints
         )
-        
+
         if result.get("status") != "success":
             raise HTTPException(status_code=500, detail=result.get("error"))
-        
+
         return result
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -236,12 +236,12 @@ async def compare_scenarios(
     """
     try:
         result = response_engine.get_scenario_comparison(scenario_ids)
-        
+
         if result.get("status") != "success":
             raise HTTPException(status_code=500, detail=result.get("error"))
-        
+
         return result
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -256,11 +256,11 @@ async def list_scenarios(
     """
     try:
         scenarios = []
-        
+
         for scenario_id, scenario_data in response_engine.scenarios.items():
             if scenario_type and scenario_data["scenario_type"] != scenario_type.lower():
                 continue
-            
+
             scenarios.append({
                 "scenario_id": scenario_id,
                 "name": scenario_data["scenario_name"],
@@ -271,16 +271,16 @@ async def list_scenarios(
                     "constraint_violations": len(scenario_data["impact_analysis"]["constraint_violations"])
                 }
             })
-        
+
         # Sort by creation date
         scenarios.sort(key=lambda x: x["created_at"], reverse=True)
-        
+
         return {
             "status": "success",
             "scenarios": scenarios,
             "total_scenarios": len(scenarios)
         }
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -296,15 +296,15 @@ async def get_scenario(
     try:
         if scenario_id not in response_engine.scenarios:
             raise HTTPException(status_code=404, detail="Scenario not found")
-        
+
         scenario = response_engine.scenarios[scenario_id]
-        
+
         return {
             "status": "success",
             "scenario_id": scenario_id,
             "scenario": scenario
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -322,15 +322,15 @@ async def get_ddmrp_buffers(
     try:
         if buffer_id not in response_engine.ddmrp_buffers:
             raise HTTPException(status_code=404, detail="Buffer setup not found")
-        
+
         buffers = response_engine.ddmrp_buffers[buffer_id]
-        
+
         return {
             "status": "success",
             "buffer_id": buffer_id,
             "buffers": buffers
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -348,15 +348,15 @@ async def get_rebalancing_plan(
     try:
         if plan_id not in response_engine.rebalancing_plan:
             raise HTTPException(status_code=404, detail="Rebalancing plan not found")
-        
+
         plan = response_engine.rebalancing_plan[plan_id]
-        
+
         return {
             "status": "success",
             "plan_id": plan_id,
             "rebalancing_plan": plan
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:

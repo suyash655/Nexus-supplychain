@@ -8,9 +8,8 @@ Endpoints:
 """
 
 import logging
-from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query  # type: ignore
+from fastapi import APIRouter, Depends, Query  # type: ignore
 
 from app.core.dependencies import require_auth  # type: ignore
 
